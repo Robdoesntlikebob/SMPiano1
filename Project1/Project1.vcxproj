@@ -133,6 +133,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="copyfrom.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="sndemu\dsp.cpp" />
     <ClCompile Include="sndemu\SNES_SPC.cpp" />

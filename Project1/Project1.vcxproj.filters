@@ -39,6 +39,9 @@
     <ClCompile Include="sndemu\SPC_Filter.cpp">
       <Filter>Header Files</Filter>
     </ClCompile>
+    <ClCompile Include="copyfrom.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="sndemu\blargg_common.h">
