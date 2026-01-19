@@ -7,7 +7,7 @@
 #include "sndemu/SPC_Filter.h"
 #include <SFML/Audio.hpp>
 
-char BRR_SAWTOOTH[] = {
+unsigned char BRR_SAWTOOTH[] = {
     0xB0, 0xFF, 0xEE, 0xDD, 0xCC, 0xBB, 0xAA, 0x99, 0x88,
     0xB3, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x7f,
 };
@@ -56,6 +56,7 @@ enum {
     RESET = 128,
     MUTE = 64,
     ECEN = 32,
+    EDL = 0x7D,
 };
 
 /*necessary variables*/
@@ -178,7 +179,7 @@ int main(int argc, char* argv[]) {
     spc_dsp_reset(dsp);
 
     // Load our instrument into the beginning of ARAM.
-    memcpy(aram + 0x200, c700sqwave, sizeof(c700sqwave) / sizeof(unsigned char));
+    memcpy(aram + 0x200, BRR_SAWTOOTH, sizeof(BRR_SAWTOOTH) / sizeof(unsigned char));
 
 
     // There's only one entry in our table.
@@ -197,22 +198,20 @@ int main(int argc, char* argv[]) {
 
     spc_dsp_write(dsp, V0ADSR1, 0x85);
     spc_dsp_write(dsp, V0ADSR2, 0x0e);
-    spc_dsp_write(dsp, KOF,0);
     spc_dsp_write(dsp, KON, 0x01);
-    spc_dsp_write(dsp, FLG, 0);
     spc_dsp_write(dsp, V0SRCN, 0);
 
-    pitch(0x1087, 0);
-    dsp->run(32 * 32000); f->run(output, 32 * 32000);
+    pitch(0x27f, 0);
+    dsp->run(32 * 32000); /*f->run(output, 32 * 32000);*/
     spc_dsp_write(dsp, KON, 0x00);
     spc_dsp_write(dsp, KOF, 0x01);
-    spc_dsp_write(dsp, FLG, RESET+MUTE);
+    //spc_dsp_write(dsp, FLG, RESET+MUTE);
     advance(2);
     spc_dsp_write(dsp, KOF, 0x00);
     spc_dsp_write(dsp, KON, 0x01);
-    spc_dsp_write(dsp, FLG, 0);
-    pitch(0x1287, 0); 
-    dsp->run(32 * 32000); f->run(output, 32 * 32000);
+    //spc_dsp_write(dsp, FLG, 0);
+    pitch(0x57f, 0); 
+    dsp->run(32 * 32000); /*f->run(output, 32 * 32000);*/
 
 
     int generated_count = spc_dsp_sample_count(dsp) / 2;

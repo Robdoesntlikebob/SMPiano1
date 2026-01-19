@@ -7,25 +7,5 @@ C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\sndemu\SPC_DS
 C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\sndemu\SPC_DSP.h(238,57): warning C4244: 'return': conversion from '__int64' to 'int', possible loss of data
   (compiling source file 'main.cpp')
   
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(11,5): warning C4838: conversion from 'int' to 'char' requires a narrowing conversion
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(11,5): warning C4309: 'initializing': truncation of constant value
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(11,11): warning C4838: conversion from 'int' to 'char' requires a narrowing conversion
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(11,11): warning C4309: 'initializing': truncation of constant value
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(11,17): warning C4838: conversion from 'int' to 'char' requires a narrowing conversion
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(11,17): warning C4309: 'initializing': truncation of constant value
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(11,23): warning C4838: conversion from 'int' to 'char' requires a narrowing conversion
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(11,23): warning C4309: 'initializing': truncation of constant value
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(11,29): warning C4838: conversion from 'int' to 'char' requires a narrowing conversion
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(11,29): warning C4309: 'initializing': truncation of constant value
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(11,35): warning C4838: conversion from 'int' to 'char' requires a narrowing conversion
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(11,35): warning C4309: 'initializing': truncation of constant value
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(11,41): warning C4838: conversion from 'int' to 'char' requires a narrowing conversion
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(11,41): warning C4309: 'initializing': truncation of constant value
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(11,47): warning C4838: conversion from 'int' to 'char' requires a narrowing conversion
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(11,47): warning C4309: 'initializing': truncation of constant value
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(11,53): warning C4838: conversion from 'int' to 'char' requires a narrowing conversion
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(11,53): warning C4309: 'initializing': truncation of constant value
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(12,5): warning C4838: conversion from 'int' to 'char' requires a narrowing conversion
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(12,5): warning C4309: 'initializing': truncation of constant value
 C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(113,36): warning C4554: '>>': check operator precedence for possible error; use parentheses to clarify precedence
   Project1.vcxproj -> C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\x64\Debug\Project1.exe
