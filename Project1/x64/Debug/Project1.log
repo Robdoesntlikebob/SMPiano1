@@ -7,8 +7,22 @@ C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\sndemu\SPC_DS
 C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\sndemu\SPC_DSP.h(238,57): warning C4244: 'return': conversion from '__int64' to 'int', possible loss of data
   (compiling source file 'main.cpp')
   
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(120,36): warning C4554: '>>': check operator precedence for possible error; use parentheses to clarify precedence
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(121,15): warning C4244: '+=': conversion from '__int64' to 'uint', possible loss of data
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(127,36): warning C4554: '>>': check operator precedence for possible error; use parentheses to clarify precedence
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(128,15): warning C4244: '+=': conversion from '__int64' to 'uint', possible loss of data
+C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(86,36): warning C4554: '>>': check operator precedence for possible error; use parentheses to clarify precedence
+C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(118,12): warning C4067: unexpected tokens following preprocessor directive - expected a newline
+C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(119,12): warning C4067: unexpected tokens following preprocessor directive - expected a newline
+C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(120,12): warning C4067: unexpected tokens following preprocessor directive - expected a newline
+C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(121,12): warning C4067: unexpected tokens following preprocessor directive - expected a newline
+C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(144,38): warning C4554: '>>': check operator precedence for possible error; use parentheses to clarify precedence
+C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(177,9): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
+C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(178,9): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
+C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(209,13): warning C4005: 'r': macro redefinition
+      C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(123,13):
+      see previous definition of 'r'
+  
+C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(210,13): warning C4005: 'w': macro redefinition
+      C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(122,13):
+      see previous definition of 'w'
+  
+C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(227,28): warning C4244: 'argument': conversion from '__int64' to 'unsigned int', possible loss of data
+C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(228,26): warning C4244: 'argument': conversion from '__int64' to 'unsigned int', possible loss of data
   Project1.vcxproj -> C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\x64\Debug\Project1.exe
