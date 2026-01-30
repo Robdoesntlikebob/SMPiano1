@@ -7,6 +7,7 @@
 #include "sndemu/SPC_Filter.h"
 #include <SFML/Audio.hpp>
 using namespace sf;
+#define print(x) std::cout << x << std::endl
 
 /*necessary variables*/
 typedef unsigned int uint;
@@ -14,6 +15,14 @@ uint smppos = 0x200;
 SPC_DSP* dsp = new SPC_DSP;
 char* aram = (char*)malloc(0x10000);
 uint dirposition = 0;
+uint smplimit = 0;
+int sample_count = 32 * 32000;
+spc_dsp_sample_t* output = (spc_dsp_sample_t*)malloc(2 * sample_count * sizeof(spc_dsp_sample_t)); //buffer
+int out() {
+    dsp->set_output(output, 2 * sample_count);
+    if (output == NULL) { print("you are fucking stupid"); return -1; }
+}
+
 
 
 unsigned char BRR_SAWTOOTH[] = {
@@ -44,7 +53,6 @@ unsigned char c700sqwave[] = {
 #define len(x) *(&x+1)-x
 #define lobit(x) x&0xff
 #define hibit(x) x>>8
-#define print(x) std::cout << x << std::endl
 #define r(x) dsp->read(x)
 #define w(x,y) dsp->write(x,y)
 int vxkon;
@@ -69,15 +77,24 @@ enum {
 
 /*functions*/
 
+void smplimitcheck(uint amount) {
+    smplimit += amount;
+    if (smplimit > sample_count) {
+        out();
+        smplimit = 0;
+    }
+}
+int getsmplimit() { return smplimit; }
 
 void pitch(int p, int voice) {
-    dsp->write(vpl(voice), p & 0xff);
-    dsp->write(vph(voice), (p >> 8)&0x3f);
+    w(vpl(voice), p & 0xff);
+    w(vph(voice), (p >> 8)&0x3f);
 }
 
 
-void advance(unsigned int samples) {dsp->run(32*samples);}
-void advance() { dsp->run(32); }
+void advance(unsigned int samples) { dsp->run(32 * samples); smplimitcheck(32*samples); }
+void advance() { dsp->run(32); smplimitcheck(32);
+}
 
 
 void smp2aram(unsigned char* sample, unsigned int length, unsigned int lppoint) {
@@ -89,8 +106,11 @@ void smp2aram(unsigned char* sample, unsigned int length, unsigned int lppoint) 
     smppos += length;
 }
 
-void tick(unsigned int ticks) {dsp->run(5334 * ticks);}
-void tick() { dsp->run(5334); }
+void tick(unsigned int ticks) {dsp->run(5334 * ticks); smplimitcheck(5334*ticks);
+}
+void tick() {
+    dsp->run(5334); smplimitcheck(5334);
+}
 
 static int note(uint length_in_ticks, uint voice, uint pitch_in_hex, uint srcn, uint voll, uint volr) {
     if (voice > 8 || voice < 0) print("can't write to this voice"); return -1;
@@ -275,10 +295,7 @@ int main() {
     if (aram == NULL) { std::cout << "no ARAM lol" << std::endl; }
 
     /*DSP*/
-    int sample_count = 32*32000;
-    spc_dsp_sample_t* output = (spc_dsp_sample_t*)malloc(2 * sample_count * sizeof(spc_dsp_sample_t)); //buffer
-    dsp->set_output(output, 2*sample_count);
-    if (output == NULL) { print("you are fucking stupid"); return -1; }
+    out();
     dsp->reset();
 
 
@@ -295,23 +312,15 @@ int main() {
     }
 
     /*hopefully creating the DSP sound*/
-    w(DIR, 0x10);
-    w(KOF, 0xff);
-    w(MVOLL, 0x80);
-    w(MVOLR, 0x80);
-    w(PMON, 0x00);
-    w(NON, 0x00);
-    w(EON, 0);
-    w(FLG, ECEN);
-    w(vvoll(0), 127); //1.VXVOL
+    w(FLG, ECEN); w(DIR, 0x10); w(MVOLL, 127); w(MVOLR, 127);
+    w(vvoll(0), 127);
     w(vvolr(0), 127);
-    w(vsrcn(0), 1); //2. VXSRCN
-    w(vadsr1(0), ADSR + 0xA); //3. VXADSR(1+2)
+    w(vsrcn(0), 1); pitch(0x1000, 0);
+    w(vadsr1(0), ADSR + 0xA);
     w(vadsr2(0), 0xE0);
-    pitch(0x1000, 1); //4. VXP (function)
-    w(KOF, 0); //5. KOF
-    w(KON, 1); //6. KON
-    tick(192); //RUN
+    w(KOF, 0); w(KON, 1);
+    tick(192);
+    w(KON, 0); w(KOF, 1); dsp->run(32*5334);
 
     /*debug (remove when not needed)*/
     int generated_count = dsp->sample_count() / 2;
@@ -327,6 +336,6 @@ int main() {
     sf::SoundBuffer bufwav("its gonna sound like shit trust me bro.wav");
     sf::Sound snd(buf);
     snd.play();
-    sf::sleep(sf::milliseconds(1000));
+    sf::sleep(sf::milliseconds(1125));
 
 }
