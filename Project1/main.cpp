@@ -45,7 +45,9 @@ unsigned char c700sqwave[] = {
 #define lobit(x) x&0xff
 #define hibit(x) x>>8
 #define print(x) std::cout << x << std::endl
-
+#define r(x) dsp->read(x)
+#define w(x,y) dsp->write(x,y)
+int vxkon;
 
 enum {
     MVOLL = 0x0C,
@@ -87,9 +89,54 @@ void smp2aram(unsigned char* sample, unsigned int length, unsigned int lppoint) 
     smppos += length;
 }
 
-void tick(unsigned int ticks) {dsp->run(8534 * ticks);}
-void tick() { dsp->run(8534); }
+void tick(unsigned int ticks) {dsp->run(5334 * ticks);}
+void tick() { dsp->run(5334); }
 
+static int note(uint length_in_ticks, uint voice, uint pitch_in_hex, uint srcn, uint voll, uint volr) {
+    if (voice > 8 || voice < 0) print("can't write to this voice"); return -1;
+    if (voll > 127) print("VOLL too loud"); return -1; if (volr > 127) print("VOLR too loud"); return -1;
+    vxkon++;
+    w(vsrcn(voice), srcn);
+    w(vvoll(voice), std::trunc(voll / vxkon));
+    w(vvolr(voice), std::trunc(volr / vxkon));
+    return 0;
+}
+static int note(uint length_in_ticks, uint voice, uint pitch_in_hex, uint srcn, uint vol) {
+    if (voice > 8 || voice < 0) print("can't write to this voice"); return -1;
+    if (vol > 127) print("VOL too loud"); return -1;
+    vxkon++;
+    w(vsrcn(voice), srcn);
+    w(vvoll(voice), std::trunc(vol / vxkon));
+    w(vvolr(voice), std::trunc(vol / vxkon));
+    w(KON, 1 << voice);
+    return 0;
+}
+
+void cmajor() {
+    w(vvoll(0), 0x3F); w(vvolr(0), 0x3F); //1. VXVOL
+    w(vsrcn(0), 1); w(vsrcn(1), 1); //2. VXSRCN
+    w(vadsr1(0), ADSR + 0xA); //3. VXADSR(1+2)
+    w(vadsr2(0), 0xe0);
+    pitch(0x10bf, 0); //4. VXP (function)
+    w(KOF, 0b11111110); //5. KOF
+    w(KON, 1); //6. KON
+    dsp->run(32 * 32000 / 4 - (256 * 32)); //RUN
+    w(KOF, 3); advance(256); pitch(0x12bf, 0); pitch(0x1000, 1); w(KOF, 0); w(KON, 3);
+    dsp->run(32 * 32000 / 4 - (256 * 32)); w(KON, 0);
+    w(KOF, 3); advance(256); pitch(0x14ff, 0); pitch(0x10bf, 1); w(KOF, 0); w(KON, 3);
+    dsp->run(32 * 32000 / 4 - (256 * 32)); w(KON, 0);
+    w(KOF, 3); advance(256); pitch(0x167f, 0); pitch(0x12bf, 1); w(KOF, 0); w(KON, 3);
+    dsp->run(32 * 32000 / 4 - (256 * 32)); w(KON, 0);
+    w(KOF, 3); advance(256); pitch(0x18ff, 0); pitch(0x14ff, 1); w(KOF, 0); w(KON, 3);
+    dsp->run(32 * 32000 / 4 - (256 * 32)); w(KON, 0);
+    w(KOF, 3); advance(256); pitch(0x1c40, 0); pitch(0x167f, 1); w(KOF, 0); w(KON, 3);
+    dsp->run(32 * 32000 / 4 - (256 * 32)); w(KON, 0);
+    w(KOF, 3); advance(256); pitch(0x2000, 0); pitch(0x18ff, 1); w(KOF, 0); w(KON, 3);
+    dsp->run(32 * 32000 / 4 - (256 * 32)); w(KON, 0);
+    w(KOF, 3); advance(256); pitch(0x217f, 0); pitch(0x14ff, 1); w(KOF, 0); w(KON, 3);
+    dsp->run(32 * 32000 / 4 - (256 * 32)); w(KON, 0);
+    w(KOF, 3); advance(16384);
+}
 
 /*structures/classes*/
 
@@ -103,11 +150,68 @@ public:
     struct sample {
         uint dirstart, loloop, hiloop;
     };
+
+    SPC700::sample newsample(unsigned char* sample, uint length, uint lppoint) {
+        SPC700::sample x = { 0,0,0 };
+        memcpy(ar + smppos, sample, length);
+        x.dirstart = 0xff00 + dirposition;
+        ar[0xff00 + dirposition++] = lobit(smppos);
+        ar[0xff00 + dirposition++] = hibit(smppos);
+        ar[0xff00 + dirposition++] = lobit(lppoint + smppos); x.loloop = hibit(smppos);
+        ar[0xff00 + dirposition++] = hibit(lppoint + smppos); x.hiloop = hibit(smppos);
+        smppos += length;
+        return x;
+    }
+
+    void changeloop(SPC700::sample &sample, uint newloop) {
+        ar[sample.dirstart + 2] = lobit(newloop); sample.loloop = lobit(newloop);
+        ar[sample.dirstart + 3] = hibit(newloop); sample.loloop = hibit(newloop);
+    }
+
+    void pitch(uint voice, uint pitch) {
+        w(vpl(voice), lobit(pitch));
+        w(vph(voice), hibit(pitch) & 0x3f);
+    }
+
+    void run(uint clocks) {
+        d->run(clocks);
+        bufplace += clocks;
+        if (bufplace > 5334) {
+            bufplace = 0;
+            d->set_output(out, 2 * 5334);
+        }
+    }
+    void run() {
+        d->run(1);
+        bufplace ++;
+        if (bufplace > 5334) {
+            bufplace = 0;
+            d->set_output(out, 2 * 5334);
+        }
+    }
+
+    void advance() { run(32); }
+    void advance(uint samples) { run(32 * samples); }
+
+    void tick() { run(5334); }
+    void tick(uint ticks) { run(5334 * ticks); }
+
+    int note(uint length_in_ticks, uint voice, uint pitch_in_hex, uint srcn, uint voll, uint volr) {
+        if (voice > 8 || voice < 0) print("can't write to this voice"); return -1;
+        if (voll > 127) print("VOLL too loud"); return -1; if (volr > 127) print("VOLR too loud"); return -1;
+        vxkon++;
+        w(vsrcn(voice), srcn);
+        w(vvoll(voice), std::trunc(voll/vxkon));
+        w(vvolr(voice), std::trunc(volr/vxkon));
+        return 0;
+    }
+
 protected:
     typedef SPC_DSP::sample_t sample_t;
-    sample_t* out = (sample_t*)malloc(2 * sizeof(sample_t*));
+    sample_t* out = (sample_t*)malloc(2 * 5334 * sizeof(sample_t));
     uint smppos = 0x200;
-    uint vxkon;
+    uint vxkon = 0;
+    uint bufplace = 0;
 private:
     /*DSP*/
     SPC_DSP* d = new SPC_DSP;
@@ -124,7 +228,7 @@ private:
     #define lobit(x) x&255
     #define hibit(x) x>>8
         d->init(ar);
-        d->set_output(out, 1);
+        d->set_output(out, 2*5334);
         for (int i = 0; i < SPC_DSP::register_count; i++) {
             if (i == FLG) w(FLG, 0x60);
             else if (i == ESA) w(ESA, 0x80);
@@ -134,50 +238,6 @@ private:
         w(DIR, 0xff); w(MVOLL, 127); w(MVOLR, 127); w(FLG, ECEN);
     }
 
-    SPC700::sample newsample(unsigned char* sample, uint length, uint lppoint) {
-        SPC700::sample x = { 0,0,0 };
-        memcpy(ar + smppos, sample, length);
-        x.dirstart = 0xff00 + dirposition;
-        ar[0xff00 + dirposition++] = lobit(smppos);
-        ar[0xff00 + dirposition++] = hibit(smppos);
-        ar[0xff00 + dirposition++] = lobit(lppoint + smppos); x.loloop = hibit(smppos);
-        ar[0xff00 + dirposition++] = hibit(lppoint + smppos); x.hiloop = hibit(smppos);
-        smppos += length;
-        return x;
-    }
-    SPC700::sample changeloop(SPC700::sample sample, uint newloop) {
-        ar[sample.dirstart + 2] = lobit(newloop); sample.loloop = lobit(newloop);
-        ar[sample.dirstart + 3] = hibit(newloop); sample.loloop = hibit(newloop);
-        return sample;
-    }
-
-    void pitch(uint voice, uint pitch) {
-        w(vpl(voice), lobit(pitch));
-        w(vph(voice), hibit(pitch) & 0x3f);
-    }
-
-    void advance() { d->run(32); }
-    void advance(uint samples) { d->run(32*samples); }
-
-    void tick() { d->run(5334); }
-    void tick(uint ticks) { d->run(5334*ticks); }
-
-    void run() {
-        d->run(32);
-        if (out[-1] != 0) {
-            free(out);
-        }
-    }
-
-    int note(uint length_in_ticks, uint voice, uint pitch_in_hex, uint srcn, uint voll, uint volr) {
-        if (voice > 8 || voice < 0) print("can't write to this voice"); return -1;
-        if (voll > 127) print("VOLL too loud"); return -1; if (volr > 127) print("VOLR too loud"); return -1;
-        vxkon++;
-        w(vsrcn(voice), srcn);
-        w(vvoll(voice), std::trunc(voll/vxkon));
-        w(vvolr(voice), std::trunc(volr/vxkon));
-        return 0;
-    }
 
     /*SFML*/
     bool onGetData(Chunk &data) override {
@@ -206,8 +266,8 @@ private:
 
 
 int main() {
-    #define r(x) dsp->read(x)
-    #define w(x,y) dsp->write(x,y)
+#define r(x) dsp->read(x)
+#define w(x,y) dsp->write(x,y)
 
     /*initialising DSP and registers*/
     if (dsp == NULL) { std::cout << "no DSP lol" << std::endl; }
@@ -215,18 +275,24 @@ int main() {
     if (aram == NULL) { std::cout << "no ARAM lol" << std::endl; }
 
     /*DSP*/
-    int sample_count = 32*32000*2;
+    int sample_count = 32*32000;
     spc_dsp_sample_t* output = (spc_dsp_sample_t*)malloc(2 * sample_count * sizeof(spc_dsp_sample_t)); //buffer
-    dsp->set_output(output, sample_count);
+    dsp->set_output(output, 2*sample_count);
     if (output == NULL) { print("you are fucking stupid"); return -1; }
     dsp->reset();
 
 
     /*load instruments*/
-
     smp2aram(BRR_SAWTOOTH, len(BRR_SAWTOOTH), 0);
     smp2aram(c700sqwave, len(c700sqwave), 9);
 
+    /*initialisation*/
+    for (int i = 0; i < 0x80; i++) {
+        if (i == FLG) w(FLG, 0x60);
+        else if (i == ESA) w(ESA, 0x80);
+        else if (i == KOF) w(KOF, 0xff);
+        else w(i, 0);
+    }
 
     /*hopefully creating the DSP sound*/
     w(DIR, 0x10);
@@ -236,35 +302,16 @@ int main() {
     w(PMON, 0x00);
     w(NON, 0x00);
     w(EON, 0);
-    w(FLG, RESET);
     w(FLG, ECEN);
-    w(vvoll(0), 0x3F); w(vvolr(0), 0x3F);
-    w(vvoll(1), 0x3F); w(vvolr(1), 0x3F);
-    w(vsrcn(0), 1); w(vsrcn(1), 1);
-    w(vadsr1(0), ADSR+0xA);
-    w(vadsr2(0), 0xe0);
-    w(vadsr1(1), ADSR + 0xA);
-    w(vadsr2(1), 0xe0);
-    pitch(0x10bf,0); pitch(0xe00, 1);
-    w(KOF, 0b11111100);
-    w(KON, 3);
-    dsp->run(32*32000/4 - (256 * 32));
-    w(KOF, 3); advance(256); pitch(0x12bf, 0); pitch(0x1000, 1); w(KOF, 0); w(KON, 3);
-    dsp->run(32 * 32000/4 - (256*32));
-    w(KOF, 3); advance(256); pitch(0x14ff, 0); pitch(0x10bf, 1); w(KOF, 0); w(KON, 3);
-    dsp->run(32 * 32000 / 4 - (256*32));
-    w(KOF, 3); advance(256); pitch(0x167f, 0); pitch(0x12bf, 1); w(KOF, 0); w(KON, 3);
-    dsp->run(32 * 32000 / 4 - (256*32));
-    w(KOF, 3); advance(256); pitch(0x18ff, 0); pitch(0x14ff, 1); w(KOF, 0); w(KON, 3);
-    dsp->run(32 * 32000 / 4 - (256*32));
-    w(KOF, 3); advance(256); pitch(0x1c40, 0); pitch(0x167f, 1); w(KOF, 0); w(KON, 3);
-    dsp->run(32 * 32000 / 4 - (256*32));
-    w(KOF, 3); advance(256); pitch(0x2000, 0); pitch(0x18ff, 1); w(KOF, 0); w(KON, 3);
-    dsp->run(32 * 32000 / 4 - (256*32));
-    w(KOF, 3); advance(256); pitch(0x217f, 0); pitch(0x14ff, 1); w(KOF, 0); w(KON, 3);
-    dsp->run(32 * 32000 / 4 - (256*32));
-    w(KOF, 3); advance(256);
-    w(FLG, RESET);
+    w(vvoll(0), 127); //1.VXVOL
+    w(vvolr(0), 127);
+    w(vsrcn(0), 1); //2. VXSRCN
+    w(vadsr1(0), ADSR + 0xA); //3. VXADSR(1+2)
+    w(vadsr2(0), 0xE0);
+    pitch(0x1000, 1); //4. VXP (function)
+    w(KOF, 0); //5. KOF
+    w(KON, 1); //6. KON
+    tick(192); //RUN
 
     /*debug (remove when not needed)*/
     int generated_count = dsp->sample_count() / 2;
@@ -276,10 +323,10 @@ int main() {
 
 
     /*SFML side of playing sound*/
-    sf::SoundBuffer buf(output, 32 * 32000 * 2, 2, 32000, { sf::SoundChannel::FrontLeft,sf::SoundChannel::FrontRight });
+    sf::SoundBuffer buf(output, 32 * 32000, 2, 32000, { sf::SoundChannel::FrontLeft,sf::SoundChannel::FrontRight });
     sf::SoundBuffer bufwav("its gonna sound like shit trust me bro.wav");
     sf::Sound snd(buf);
     snd.play();
-    sf::sleep(sf::milliseconds(2100));
+    sf::sleep(sf::milliseconds(1000));
 
 }
