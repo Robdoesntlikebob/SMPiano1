@@ -92,8 +92,8 @@ void pitch(int p, int voice) {
 }
 
 
-void advance(unsigned int samples) { dsp->run(32 * samples); smplimitcheck(32*samples); }
-void advance() { dsp->run(32); smplimitcheck(32);
+void advance(unsigned int samples) { dsp->run(32 * samples); /*smplimitcheck(32*samples);*/ }
+void advance() { dsp->run(32); /*smplimitcheck(32);*/
 }
 
 
@@ -106,30 +106,38 @@ void smp2aram(unsigned char* sample, unsigned int length, unsigned int lppoint) 
     smppos += length;
 }
 
-void tick(unsigned int ticks) {dsp->run(5334 * ticks); smplimitcheck(5334*ticks);
+void tick(unsigned int ticks) {dsp->run(5334 * ticks); /*smplimitcheck(5334*ticks);*/
 }
 void tick() {
-    dsp->run(5334); smplimitcheck(5334);
+    dsp->run(5334); /*smplimitcheck(5334);*/
 }
 
-static int note(uint length_in_ticks, uint voice, uint pitch_in_hex, uint srcn, uint voll, uint volr) {
-    if (voice > 8 || voice < 0) print("can't write to this voice"); return -1;
-    if (voll > 127) print("VOLL too loud"); return -1; if (volr > 127) print("VOLR too loud"); return -1;
+//usage: tick(note(length_in_ticks, voice, hz, p, srcn, voll, volr, adsr1, adsr2))
+int note(uint length_in_ticks, uint voice, bool hz, uint p, uint srcn, uint voll, uint volr, uint adsr1, uint adsr2) {
     vxkon++;
-    w(vsrcn(voice), srcn);
-    w(vvoll(voice), std::trunc(voll / vxkon));
+    w(vvoll(voice), std::trunc(voll/vxkon));
     w(vvolr(voice), std::trunc(volr / vxkon));
-    return 0;
+    w(vsrcn(voice), 1);
+    if (hz == 1) pitch((4096 * (p / 32000)) & 0x3fff, voice);
+    else pitch(p & 0x3fff, voice);
+    w(vadsr1(voice), adsr1);
+    w(vadsr2(voice), adsr2);
+    w(KOF, 0<<voice); w(KON, 1<<voice);
+    return length_in_ticks;
 }
-static int note(uint length_in_ticks, uint voice, uint pitch_in_hex, uint srcn, uint vol) {
-    if (voice > 8 || voice < 0) print("can't write to this voice"); return -1;
-    if (vol > 127) print("VOL too loud"); return -1;
+
+//usage: tick(note(length_in_ticks, voice, hz, p, srcn, vol, adsr1, adsr2))
+int note(uint length_in_ticks, uint voice, bool hz, uint p, uint srcn, uint vol, uint adsr1, uint adsr2) {
     vxkon++;
-    w(vsrcn(voice), srcn);
     w(vvoll(voice), std::trunc(vol / vxkon));
     w(vvolr(voice), std::trunc(vol / vxkon));
-    w(KON, 1 << voice);
-    return 0;
+    w(vsrcn(voice), 1);
+    if (hz == 1) pitch((4096 * (p / 32000)) & 0x3fff, voice);
+    else pitch(p & 0x3fff, voice);
+    w(vadsr1(voice), adsr1);
+    w(vadsr2(voice), adsr2);
+    w(KOF, 0 << voice); w(KON, 1 << voice);
+    return length_in_ticks;
 }
 
 void cmajor() {
@@ -313,14 +321,11 @@ int main() {
 
     /*hopefully creating the DSP sound*/
     w(FLG, ECEN); w(DIR, 0x10); w(MVOLL, 127); w(MVOLR, 127);
-    w(vvoll(0), 127);
-    w(vvolr(0), 127);
-    w(vsrcn(0), 1); pitch(0x1000, 0);
-    w(vadsr1(0), ADSR + 0xA);
-    w(vadsr2(0), 0xE0);
-    w(KOF, 0); w(KON, 1);
-    tick(192);
-    w(KON, 0); w(KOF, 1); dsp->run(32*5334);
+    tick(note(190, 0, 0, 0x107f, 1, 127, ADSR + 0xA, 0xE0));
+    w(KON, 0); w(KOF, 1); tick(2);
+    tick(note(190, 0, 0, 0x12af, 1, 127, ADSR + 0xA, 0xE0));
+    w(KON, 0); w(KOF, 1); tick(64);
+    
 
     /*debug (remove when not needed)*/
     int generated_count = dsp->sample_count() / 2;
@@ -336,6 +341,6 @@ int main() {
     sf::SoundBuffer bufwav("its gonna sound like shit trust me bro.wav");
     sf::Sound snd(buf);
     snd.play();
-    sf::sleep(sf::milliseconds(1125));
+    sf::sleep(sf::milliseconds(3000));
 
 }
