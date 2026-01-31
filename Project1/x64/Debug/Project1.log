@@ -13,22 +13,25 @@ C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(118,
 C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(119,5): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
 C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(132,5): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
 C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(133,5): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(250,12): warning C4067: unexpected tokens following preprocessor directive - expected a newline
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(251,12): warning C4067: unexpected tokens following preprocessor directive - expected a newline
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(252,12): warning C4067: unexpected tokens following preprocessor directive - expected a newline
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(253,12): warning C4067: unexpected tokens following preprocessor directive - expected a newline
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(189,38): warning C4554: '>>': check operator precedence for possible error; use parentheses to clarify precedence
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(232,9): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(233,9): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(297,9): warning C4005: 'r': macro redefinition
-      C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(255,13):
+C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(210,12): warning C4067: unexpected tokens following preprocessor directive - expected a newline
+C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(211,12): warning C4067: unexpected tokens following preprocessor directive - expected a newline
+C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(212,12): warning C4067: unexpected tokens following preprocessor directive - expected a newline
+C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(213,12): warning C4067: unexpected tokens following preprocessor directive - expected a newline
+C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(241,38): warning C4554: '>>': check operator precedence for possible error; use parentheses to clarify precedence
+C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(265,9): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
+C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(266,9): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
+C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(279,9): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
+C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(280,9): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
+C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(303,9): warning C4005: 'r': macro redefinition
+      C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(215,13):
       see previous definition of 'r'
   
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(298,9): warning C4005: 'w': macro redefinition
-      C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(254,13):
+C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(304,9): warning C4005: 'w': macro redefinition
+      C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(214,13):
       see previous definition of 'w'
   
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(311,28): warning C4244: 'argument': conversion from '__int64' to 'unsigned int', possible loss of data
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(312,26): warning C4244: 'argument': conversion from '__int64' to 'unsigned int', possible loss of data
+C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(317,28): warning C4244: 'argument': conversion from '__int64' to 'unsigned int', possible loss of data
+C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(318,26): warning C4244: 'argument': conversion from '__int64' to 'unsigned int', possible loss of data
+C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(352,19): warning C4834: discarding return value of function with [[nodiscard]] attribute
 C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(24,1): warning C4715: 'out': not all control paths return a value
   Project1.vcxproj -> C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\x64\Debug\Project1.exe
