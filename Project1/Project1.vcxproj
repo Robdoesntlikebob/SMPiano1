@@ -24,6 +24,7 @@
     <ProjectGuid>{e71333aa-f8af-4bde-a679-197532012fbe}</ProjectGuid>
     <RootNamespace>Project1</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>SMPiano</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -105,13 +106,13 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>C:\Users\thech\Desktop\Project1\Project1\SFML\include;C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\ImSFML;C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\ImGUI;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\imgui-sfml-3.0;C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\SFML\include;C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\ImGui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>sfml-window-d.lib;sfml-system-d.lib;sfml-graphics-d.lib;sfml-audio-d.lib;sfml-network-d.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:\Users\thech\Documents\GitHub\snes-daw-cpp\SFML\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>sfml-window-d.lib;sfml-system-d.lib;sfml-graphics-d.lib;sfml-audio-d.lib;sfml-network-d.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\SFML\lib</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -123,22 +124,22 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>C:\Users\thech\Desktop\Project1\Project1\SFML\include;C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\ImSFML;C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\ImGUI;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\imgui-sfml-3.0;C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\SFML\include;C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\ImGui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>sfml-window.lib;sfml-system.lib;sfml-graphics.lib;sfml-audio.lib;sfml-network.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:\Users\thech\Documents\GitHub\snes-daw-cpp\SFML\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>sfml-window.lib;sfml-system.lib;sfml-graphics.lib;sfml-audio.lib;sfml-network.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\SFML\lib</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="copyfrom.cpp" />
-    <ClCompile Include="ImGUI\imgui-SFML.cpp" />
-    <ClCompile Include="ImGUI\imgui.cpp" />
-    <ClCompile Include="ImGUI\imgui_demo.cpp" />
-    <ClCompile Include="ImGUI\imgui_tables.cpp" />
-    <ClCompile Include="ImGUI\imgui_widgets.cpp" />
+    <ClCompile Include="imgui-sfml-3.0\imgui-SFML.cpp" />
+    <ClCompile Include="ImGui\imgui.cpp" />
+    <ClCompile Include="ImGui\imgui_draw.cpp" />
+    <ClCompile Include="ImGui\imgui_tables.cpp" />
+    <ClCompile Include="ImGui\imgui_widgets.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="sndemu\dsp.cpp" />
     <ClCompile Include="sndemu\SNES_SPC.cpp" />
@@ -149,6 +150,12 @@
     <ClCompile Include="sndemu\SPC_Filter.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="imgui-sfml-3.0\imgui-SFML.h" />
+    <ClInclude Include="ImGui\imgui.h" />
+    <ClInclude Include="ImGui\imgui_internal.h" />
+    <ClInclude Include="ImGui\imstb_rectpack.h" />
+    <ClInclude Include="ImGui\imstb_textedit.h" />
+    <ClInclude Include="ImGui\imstb_truetype.h" />
     <ClInclude Include="sndemu\blargg_common.h" />
     <ClInclude Include="sndemu\blargg_config.h" />
     <ClInclude Include="sndemu\blargg_endian.h" />
@@ -159,6 +166,10 @@
     <ClInclude Include="sndemu\SPC_CPU.h" />
     <ClInclude Include="sndemu\SPC_DSP.h" />
     <ClInclude Include="sndemu\SPC_Filter.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="class SPC700.txt" />
+    <Text Include="void idk.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

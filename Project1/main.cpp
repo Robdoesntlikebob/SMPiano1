@@ -4,65 +4,20 @@
 #include <iostream>
 #include "sndemu/dsp.h"
 #include "sndemu/SPC_DSP.h"
-#include "sndemu/SPC_Filter.h"
 #include <SFML/Audio.hpp>
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
 #include <SFML/System.hpp>
 #include <SFML/Network.hpp>
+#include <SFML/OpenGL.hpp>
 #include <imgui.h>
 #include <imgui-SFML.h>
 using namespace sf;
-#define print(x) std::cout << x << std::endl
+int smppos = 0x200;
+int dirposition = 0;
+int vxkon = 0;
 
 /*necessary variables*/
-typedef unsigned int uint;
-uint smppos = 0x200;
-SPC_DSP* dsp = new SPC_DSP;
-char* aram = (char*)calloc(0x10000,sizeof(char*));
-uint dirposition = 0;
-uint smplimit = 0;
-int sample_count = 32 * 32000;
-spc_dsp_sample_t* output = (spc_dsp_sample_t*)calloc(2 * sample_count, sizeof(spc_dsp_sample_t)); //buffer5
-int out() {
-    dsp->set_output(output, 2 * sample_count);
-    if (output == NULL) { print("you are fucking stupid"); return -1; }
-}
-
-
-
-unsigned char BRR_SAWTOOTH[] = {
-    0xB0, 0xFF, 0xEE, 0xDD, 0xCC, 0xBB, 0xAA, 0x99, 0x88,
-    0xB3, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x00,
-};
-
-unsigned char c700sqwave[] = {
-    0b10000100, 0x00, 0x00, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77,
-    0b11000000, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99,
-    0b11000000, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99,
-    0b11000000, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77,
-    0b11000011, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77
-};
-
-// Constants for the DSP registers.
-
-#define vvoll(n) (n<<4)
-#define vvolr(n) (n<<4)+1
-#define vpl(n) (n<<4)+2
-#define vph(n) (n<<4)+3
-#define vsrcn(n) (n<<4)+4
-#define vadsr1(n) (n<<4)+5
-#define vadsr2(n) (n<<4)+6
-#define vgain(n) (n<<4)+7
-#define venvx(n) (n<<4)+8
-#define voutx(n) (n<<4)+9
-#define len(x) *(&x+1)-x
-#define lobit(x) x&0xff
-#define hibit(x) x>>8
-#define r(x) dsp->read(x)
-#define w(x,y) dsp->write(x,y)
-int vxkon;
-
 enum {
     MVOLL = 0x0C,
     MVOLR = 0x1C,
@@ -79,207 +34,95 @@ enum {
     ECEN = 32,
     EON = 0x4D,
 };
+typedef unsigned int uint;
 
+unsigned char BRR_SAWTOOTH[] = {
+    0xB0, 0xFF, 0xEE, 0xDD, 0xCC, 0xBB, 0xAA, 0x99, 0x88,
+    0xB3, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x00,
+};
 
-/*functions*/
+unsigned char c700sqwave[] = {
+    0b10000100, 0x00, 0x00, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77,
+    0b11000000, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99,
+    0b11000000, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99,
+    0b11000000, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77,
+    0b11000011, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77
+};
 
-void smplimitcheck(uint amount) {
-    smplimit += amount;
-    if (smplimit > sample_count) {
-        out();
-        smplimit = 0;
-    }
-}
-int getsmplimit() { return smplimit; }
+// Constants for the DSP registers.
+#define vvoll(n) (n<<4)
+#define vvolr(n) (n<<4)+1
+#define vpl(n) (n<<4)+2
+#define vph(n) (n<<4)+3
+#define vsrcn(n) (n<<4)+4
+#define vadsr1(n) (n<<4)+5
+#define vadsr2(n) (n<<4)+6
+#define vgain(n) (n<<4)+7
+#define venvx(n) (n<<4)+8
+#define voutx(n) (n<<4)+9
+#define len(x) *(&x+1)-x
+#define lobit(x) x&0xff
+#define hibit(x) x>>8
+#define print(x) std::cout << x << std::endl
+#define r(x) dsp->read(x)
+#define w(x,y) dsp->write(x,y)
 
-void pitch(int p, int voice) {
-    w(vpl(voice), p & 0xff);
-    w(vph(voice), (p >> 8)&0x3f);
-}
-
-
-void advance(unsigned int samples) { dsp->run(32 * samples); /*smplimitcheck(32*samples);*/ }
-void advance() { dsp->run(32); /*smplimitcheck(32);*/
-}
-
-
-void smp2aram(unsigned char* sample, unsigned int length, unsigned int lppoint) {
-    memcpy(aram+smppos, sample, length);
-    aram[0x1000 + dirposition++] = lobit(smppos);
-    aram[0x1000 + dirposition++] = hibit(smppos);
-    aram[0x1000 + dirposition++] = lobit(lppoint+smppos);
-    aram[0x1000 + dirposition++] = hibit(lppoint+smppos);
-    smppos += length;
-}
-
-void tick(unsigned int ticks) {dsp->run(5334 * ticks); /*smplimitcheck(5334*ticks);*/
-}
-void tick() {
-    dsp->run(5334); /*smplimitcheck(5334);*/
-}
-
-//usage: tick(note(length_in_ticks, voice, hz, p, srcn, voll, volr, adsr1, adsr2))
-int note(uint length_in_ticks, uint voice, bool hz, uint p, uint srcn, uint voll, uint volr, uint adsr1, uint adsr2) {
-    vxkon++;
-    w(vvoll(voice), std::trunc(voll/vxkon));
-    w(vvolr(voice), std::trunc(volr / vxkon));
-    w(vsrcn(voice), 1);
-    if (hz == 1) pitch((4096 * (p / 32000)) & 0x3fff, voice);
-    else pitch(p & 0x3fff, voice);
-    w(vadsr1(voice), adsr1);
-    w(vadsr2(voice), adsr2);
-    w(KOF, 0<<voice); w(KON, 1<<voice);
-    return length_in_ticks;
-}
-
-//usage: tick(note(length_in_ticks, voice, hz, p, srcn, vol, adsr1, adsr2))
-int note(uint length_in_ticks, uint voice, bool hz, uint p, uint srcn, uint vol, uint adsr1, uint adsr2) {
-    vxkon++;
-    w(vvoll(voice), std::trunc(vol / vxkon));
-    w(vvolr(voice), std::trunc(vol / vxkon));
-    w(vsrcn(voice), 1);
-    if (hz == 1) pitch((4096 * (p / 32000)) & 0x3fff, voice);
-    else pitch(p & 0x3fff, voice);
-    w(vadsr1(voice), adsr1);
-    w(vadsr2(voice), adsr2);
-    w(KOF, 0 << voice); w(KON, 1 << voice);
-    return length_in_ticks;
-}
-
-void cmajor() {
-    w(vvoll(0), 0x3F); w(vvolr(0), 0x3F); //1. VXVOL
-    w(vvoll(1), 0x3F); w(vvolr(1), 0x3F); //1. VXVOL
-    w(vsrcn(0), 1); w(vsrcn(1), 1); //2. VXSRCN
-    w(vadsr1(0), ADSR + 0xA); //3. VXADSR(1+2)
-    w(vadsr2(0), 0xe0);
-    w(vadsr1(1), ADSR + 0xA); //3. VXADSR(1+2)
-    w(vadsr2(1), 0xe0);
-    pitch(0x10bf, 0); //4. VXP (function)
-    pitch(0xe00, 1); //4. VXP (function)
-    w(KOF, 0b11111100); //5. KOF
-    w(KON, 3); //6. KON
-    dsp->run(32 * 32000 / 4 - (256 * 32)); //RUN
-    w(KOF, 3); advance(256); pitch(0x12bf, 0); pitch(0x1000, 1); w(KOF, 0); w(KON, 3);
-    dsp->run(32 * 32000 / 4 - (256 * 32)); w(KON, 0);
-    w(KOF, 3); advance(256); pitch(0x14ff, 0); pitch(0x10bf, 1); w(KOF, 0); w(KON, 3);
-    dsp->run(32 * 32000 / 4 - (256 * 32)); w(KON, 0);
-    w(KOF, 3); advance(256); pitch(0x167f, 0); pitch(0x12bf, 1); w(KOF, 0); w(KON, 3);
-    dsp->run(32 * 32000 / 4 - (256 * 32)); w(KON, 0);
-    w(KOF, 3); advance(256); pitch(0x18ff, 0); pitch(0x14ff, 1); w(KOF, 0); w(KON, 3);
-    dsp->run(32 * 32000 / 4 - (256 * 32)); w(KON, 0);
-    w(KOF, 3); advance(256); pitch(0x1c40, 0); pitch(0x167f, 1); w(KOF, 0); w(KON, 3);
-    dsp->run(32 * 32000 / 4 - (256 * 32)); w(KON, 0);
-    w(KOF, 3); advance(256); pitch(0x2000, 0); pitch(0x18ff, 1); w(KOF, 0); w(KON, 3);
-    dsp->run(32 * 32000 / 4 - (256 * 32)); w(KON, 0);
-    w(KOF, 3); advance(256); pitch(0x217f, 0); pitch(0x14ff, 1); w(KOF, 0); w(KON, 3);
-    dsp->run(32 * 32000 / 4 - (256 * 32)); w(KON, 0);
-    w(KOF, 3); advance(256);
-}
-
-/*structures/classes*/
 
 class SPC700 : public SoundStream {
 private:
-    /*SFML*/
-    bool onGetData(Chunk &data) override {
-        const int count = 2;
-        data.samples = &sfOut[sfCSample];
-        if (sfCSample + count <= sfOut.size()) {
-            data.sampleCount = count;
-            data.samples += count;
-            return true;
-        }
-        else {
-            data.sampleCount = sfOut.size() - sfCSample;
-            sfCSample = sfOut.size();
-            return false;
-        }
+    SPC_DSP* dsp = new SPC_DSP;
+    char* aram = (char*)calloc(0x10000, sizeof(char));
+    SPC_DSP::sample_t* out = (SPC_DSP::sample_t*)calloc(64*32000, sizeof(SPC_DSP::sample_t));
+    SoundBuffer buf;
+    //buf.loadFromSamples(out, 64 * 32000, 2, 32000, { sf::SoundChannel::FrontLeft, sf::SoundChannel::FrontRight });
+    unsigned smppos = 0x200;
+    unsigned adir = 0xff<<8;
+    unsigned dir = 0xff;
+    unsigned vxkon = 0;
+    size_t idk{};
+    virtual bool onGetData(Chunk& data) override {
+        dsp->set_output(out, 64*32000);
+        return true;
     }
-    void onSeek(Time offset) override {
-        sfCSample = static_cast<std::size_t>(offset.asSeconds() * getSampleRate() * getChannelCount());
+    virtual void onSeek(Time timeOffset) override {
+        idk = static_cast<size_t>(timeOffset.asSeconds());
     }
-
-    std::vector<std::int16_t> sfOut;
-    std::size_t sfCSample{};
-    struct sample {
-        uint dirstart, loloop, hiloop;
-    };
-
-    /*DSP*/
-    SPC_DSP* d = new SPC_DSP;
-    char* ar = (char*)calloc(0x10000,0x10000);
-    uint dirposition = 0;
-    sf::SoundBuffer buf;
-
 public:
-    typedef SPC_DSP::sample_t sample_t;
-    sample_t* out = (sample_t*)calloc(2, sizeof(sample_t));
     SPC700() {
-    #undef w(x,y)
-    #undef r(x)
-    #undef lobit(x)
-    #undef hibit(x)
-    #define w(x,y) d->write(x,y)
-    #define r(x) d->read(x)
-    #define lobit(x) x&255
-    #define hibit(x) x>>8
-        d->init(ar);
-        d->set_output(out, 2);
-        for (int i = 0; i < SPC_DSP::register_count; i++) {
-            if (i == FLG) w(FLG, 0x60);
-            else if (i == ESA) w(ESA, 0x80);
-            else if (i == KOF) w(KOF, 0xff);
+        dsp->init(aram);
+        dsp->set_output(out, 64*32000);
+        dsp->reset();
+        for (unsigned i = 0; i < 0x7F; i++) {
+            if (i == FLG)w(FLG, 0x60);
+            else if (i == ESA)w(ESA, 0x80);
+            else if (i == KOF)w(KOF, 0xff);
             else w(i, 0);
-        }
-        w(DIR, 0xff); w(MVOLL, 127); w(MVOLR, 127); w(FLG, ECEN);
-    }
-    void load(const SoundBuffer& out) {
-        sfOut.assign(out.getSamples(), out.getSamples() + out.getSampleCount());
-        sfCSample = 0;
-        initialize(out.getChannelCount(), out.getSampleRate(), { SoundChannel::FrontLeft,SoundChannel::FrontRight });
+        }w(MVOLL, 127); w(MVOLR, 127); w(DIR, dir);
+        buf.loadFromSamples(out, 64*32000,2,32000, { sf::SoundChannel::FrontLeft, sf::SoundChannel::FrontRight });
+        initialize(2, 32000, {sf::SoundChannel::FrontLeft, sf::SoundChannel::FrontRight});
     }
 
-    SPC700::sample newsample(unsigned char* sample, uint length, uint lppoint) {
-        SPC700::sample x = { 0,0,0 };
-        memcpy(ar + smppos, sample, length);
-        x.dirstart = 0xff00 + dirposition;
-        ar[0xff00 + dirposition++] = lobit(smppos);
-        ar[0xff00 + dirposition++] = hibit(smppos);
-        ar[0xff00 + dirposition++] = lobit(lppoint + smppos); x.loloop = hibit(smppos);
-        ar[0xff00 + dirposition++] = hibit(lppoint + smppos); x.hiloop = hibit(smppos);
+    void sample(unsigned char* sample, unsigned length, unsigned lppoint) {
+        memcpy(aram + smppos, sample, length);
+        aram[adir + 0] = lobit(smppos);
+        aram[adir + 1] = hibit(smppos);
+        aram[adir + 2] = lobit(lppoint + smppos);
+        aram[adir + 3] = hibit(lppoint + smppos);
         smppos += length;
-        return x;
     }
+    void pitch(unsigned voice, unsigned p) {
+        w(vpl(voice), lobit(p));
+        w(vph(voice), hibit(p) & 0x3f);
+    }//(4096*(p/32000))&0x3fff
 
-    void changeloop(SPC700::sample &sample, uint newloop) {
-        ar[sample.dirstart + 2] = lobit(newloop); sample.loloop = lobit(newloop);
-        ar[sample.dirstart + 3] = hibit(newloop); sample.loloop = hibit(newloop);
+    void tick(unsigned int ticks) {
+        dsp->run(5334 * ticks);
     }
-
-    void pitch(uint voice, uint pitch) {
-        w(vpl(voice), lobit(pitch));
-        w(vph(voice), hibit(pitch) & 0x3f);
-    }
-
-    void advance() { d->run(32); d->set_output(out, 2); }
-    void advance(uint samples) {
-        for (int i = 0; i < samples; i++) {
-            advance();
-        }
-    }
-
     void tick() {
-        for (int i = 0; i < 166.6875f; i++) {
-            advance(); //5334 clocks, hence that weird fucking float number
-        }
-    }
-    void tick(uint ticks) {
-        for (int i = 0; i < ticks; i++) {
-            tick();
-        }
+        dsp->run(5334);
     }
 
-    //usage: tick(note(length_in_ticks, voice, hz, p, srcn, voll, volr, adsr1, adsr2));
+    //usage: tick(note(length_in_ticks, voice, hz, p, srcn, voll, volr, adsr1, adsr2))
     int note(uint length_in_ticks, uint voice, bool hz, uint p, uint srcn, uint voll, uint volr, uint adsr1, uint adsr2) {
         vxkon++;
         w(vvoll(voice), std::trunc(voll / vxkon));
@@ -293,7 +136,7 @@ public:
         return length_in_ticks;
     }
 
-    //usage: tick(note(length_in_ticks, voice, hz, p, srcn, vol, adsr1, adsr2));
+    //usage: tick(note(length_in_ticks, voice, hz, p, srcn, vol, adsr1, adsr2))
     int note(uint length_in_ticks, uint voice, bool hz, uint p, uint srcn, uint vol, uint adsr1, uint adsr2) {
         vxkon++;
         w(vvoll(voice), std::trunc(vol / vxkon));
@@ -306,73 +149,65 @@ public:
         w(KOF, 0 << voice); w(KON, 1 << voice);
         return length_in_ticks;
     }
-
-protected:
-    uint smppos = 0x200;
-    uint vxkon = 0;
+    void endnote(uint voice) {
+        w(KOF, 1 << voice); w(KON, 0 << voice);
+        tick(2);
+    }
 };
 
 
 /*main*/
-
-
+using namespace ImGui;
 int main() {
-#define r(x) dsp->read(x)
-#define w(x,y) dsp->write(x,y)
+    SPC700 emu;
+    emu.sample(c700sqwave, len(c700sqwave), 9);
+    emu.tick(emu.note(190,0,1,32000,0,127,ADSR+0xA,0xE0));
+    emu.endnote(0);
 
-    ////initialising DSP and registers
-    //if (dsp == NULL) { std::cout << "no DSP lol" << std::endl; }
-    //dsp->init(aram);
-    //if (aram == NULL) { std::cout << "no ARAM lol" << std::endl; }
-
-    ////DSP
-    //out();
-    //dsp->reset();
-
-
-    ////load instruments
-    //smp2aram(BRR_SAWTOOTH, len(BRR_SAWTOOTH), 0);
-    //smp2aram(c700sqwave, len(c700sqwave), 9);
-
-    ////initialisation
-    //for (int i = 0; i < 0x80; i++) {
-    //    if (i == FLG) w(FLG, 0x60);
-    //    else if (i == ESA) w(ESA, 0x80);
-    //    else if (i == KOF) w(KOF, 0xff);
-    //    else w(i, 0);
-    //}
-    //w(FLG, ECEN); w(DIR, 0x10); w(MVOLL, 127); w(MVOLR, 127);
-
-    ////hopefully creating the DSP sound
-    //tick(note(190, 0, 0, 0x107f, 1, 127, ADSR + 0xA, 0xE0));
-    //w(KON, 0); w(KOF, 1); tick(2);
-    //tick(note(190, 0, 0, 0x12af, 1, 127, ADSR + 0xA, 0xE0));
-    //w(KON, 0); w(KOF, 1); tick(2);
-
-    RenderWindow window(sf::VideoMode({ 1280,720 }), "SMPiano (attempt 67676767)");
-    ImGUI::SFML::Init(window);
-
-    SPC700* emu = new SPC700;
-    emu->newsample(c700sqwave, len(c700sqwave), 9);
-    emu->newsample(BRR_SAWTOOTH, len(BRR_SAWTOOTH), 0);
-    sf::SoundBuffer emusound(emu->out, sizeof(SPC700::sample_t));
-
-
-    /*debug (remove when not needed)*/
-    int generated_count = dsp->sample_count() / 2;
-    printf("Generated %d samples\n", generated_count);
-
-    for (int i = 0; i < 10; i++) {
-        printf("%02d: %04hx %04hx\n", i, output[i * 2], output[1 + i * 2]);
-    }
-
-
-    /*SFML side of playing sound*/
-    sf::SoundBuffer buf(output, 32*32000, 2, 32000, { sf::SoundChannel::FrontLeft,sf::SoundChannel::FrontRight });
-    sf::SoundBuffer bufwav("its gonna sound like shit trust me bro.wav");
-    sf::Sound snd(buf);
-    buf.saveToFile("debug.wav");
-    snd.play();
-    sf::sleep(sf::milliseconds(2100));
-
+    emu.play();
+    sleep(seconds(1));
 }
+
+/*
+    sf::RenderWindow window(sf::VideoMode({ 1280, 720 }), "SMPiano");
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    ImGui::SFML::Init(window, false);
+    io.Fonts->Clear();
+    ImFont* SNES = io.Fonts->AddFontFromFileTTF("SNES.ttf", 18);
+    ImFont* REG = io.Fonts->AddFontFromFileTTF("C:/Windows/Fonts/Arial.ttf", 11);
+    SFML::UpdateFontTexture();
+    sf::Clock deltaClock;
+    while (window.isOpen()) {
+        while (const auto event = window.pollEvent()) {
+            ImGui::SFML::ProcessEvent(window, *event);
+#define event(e) event->is<sf::Event::##e>()
+            if (event(Closed)) {
+                window.close();
+            }
+        }
+
+
+        SFML::Update(window, deltaClock.restart());
+
+        SetNextWindowSize(ImVec2(window.getSize()));
+        SetNextWindowPos(ImVec2(0,0));
+        Begin("Main", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar);
+
+        //PushFont(SNES);
+        if (Button("Delete System32")) print("System32 Deleted bwahahha >:3");
+        if (Button("Load C700SQWAVE")) emu.newsample(c700sqwave, len(c700sqwave), 9);
+        if (Button("Play")) {
+            print("Note supposedly playing...");
+        }
+        //PopFont();
+
+        //End
+        End();
+        window.clear();
+        ImGui::SFML::Render(window);
+        window.display();
+    }
+    ImGui::SFML::Shutdown();
+*/
+

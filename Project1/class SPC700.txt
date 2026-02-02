@@ -1,0 +1,134 @@
+/*structures/classes*/
+
+class SPC700 : public SoundStream {
+protected:
+    uint smppos = 0x200;
+    uint vxkon = 0;
+    struct sample {
+        uint dirstart, loloop, hiloop;
+    };
+public:
+    typedef SPC_DSP::sample_t sample_t;
+    sample_t* out = (sample_t*)calloc(2*5334,sizeof(sample_t));
+    SPC700() {
+    #undef w(x,y)
+    #undef r(x)
+    #undef lobit(x)
+    #undef hibit(x)
+    #define w(x,y) d->write(x,y)
+    #define r(x) d->read(x)
+    #define lobit(x) x&255
+    #define hibit(x) x>>8
+        d->init(ar);
+        d->set_output(out, 5334);
+        for (int i = 0; i < 0x7F; i++) {
+            if (i == FLG) w(FLG, 0x60);
+            else if (i == ESA) w(ESA, 0x80);
+            else if (i == KOF) w(KOF, 0xff);
+            else w(i, 0);
+        }
+        w(DIR, 0xff); w(MVOLL, 127); w(MVOLR, 127); w(FLG, ECEN);
+    }
+    void load(const SoundBuffer& out) {
+        sfOut.assign(out.getSamples(), out.getSamples() + out.getSampleCount());
+        sfCSample = 0;
+        initialize(out.getChannelCount(), out.getSampleRate(), { SoundChannel::FrontLeft,SoundChannel::FrontRight });
+    }
+
+    SPC700::sample newsample(unsigned char* sample, uint length, uint lppoint) {
+        SPC700::sample x = { 0,0,0 };
+        memcpy(ar + smppos, sample, length);
+        x.dirstart = 0xff00 + dirposition;
+        ar[0xff00 + dirposition++] = lobit(smppos);
+        ar[0xff00 + dirposition++] = hibit(smppos);
+        ar[0xff00 + dirposition++] = lobit(lppoint + smppos); x.loloop = hibit(smppos);
+        ar[0xff00 + dirposition++] = hibit(lppoint + smppos); x.hiloop = hibit(smppos);
+        smppos += length;
+        return x;
+    }
+
+    void changeloop(SPC700::sample &sample, uint newloop) {
+        ar[sample.dirstart + 2] = lobit(newloop); sample.loloop = lobit(newloop);
+        ar[sample.dirstart + 3] = hibit(newloop); sample.loloop = hibit(newloop);
+    }
+
+    void pitch(uint voice, uint pitch) {
+        w(vpl(voice), lobit(pitch));
+        w(vph(voice), hibit(pitch) & 0x3f);
+    }
+
+    //void advance() { d->run(32); d->set_output(out, 2); }
+    //void advance(uint samples) {
+    //    for (int i = 0; i < samples; i++) {
+    //        advance();
+    //    }
+    //}
+
+    void tick() {
+        d->run(5334); d->set_output(out, 5334);
+    }
+    void tick(uint ticks) {
+        for (int i = 0; i < ticks; i++) {
+            tick();
+        }
+    }
+
+    //usage: tick(note(length_in_ticks, voice, hz, p, srcn, voll, volr, adsr1, adsr2));
+    int note(uint length_in_ticks, uint voice, bool hz, uint p, uint srcn, uint voll, uint volr, uint adsr1, uint adsr2) {
+        vxkon++;
+        w(vvoll(voice), std::trunc(voll / vxkon));
+        w(vvolr(voice), std::trunc(volr / vxkon));
+        w(vsrcn(voice), 1);
+        if (hz == 1) pitch((4096 * (p / 32000)) & 0x3fff, voice);
+        else pitch(p & 0x3fff, voice);
+        w(vadsr1(voice), adsr1);
+        w(vadsr2(voice), adsr2);
+        w(KOF, 0 << voice); w(KON, 1 << voice);
+        return length_in_ticks;
+    }
+
+    //usage: tick(note(length_in_ticks, voice, hz, p, srcn, vol, adsr1, adsr2));
+    int note(uint length_in_ticks, uint voice, bool hz, uint p, uint srcn, uint vol, uint adsr1, uint adsr2) {
+        vxkon++;
+        w(vvoll(voice), std::trunc(vol / vxkon));
+        w(vvolr(voice), std::trunc(vol / vxkon));
+        w(vsrcn(voice), 1);
+        if (hz == 1) pitch((4096 * (p / 32000)) & 0x3fff, voice);
+        else pitch(p & 0x3fff, voice);
+        w(vadsr1(voice), adsr1);
+        w(vadsr2(voice), adsr2);
+        w(KOF, 0 << voice); w(KON, 1 << voice);
+        return length_in_ticks;
+    }
+    void endnote(uint voice) {
+        w(KOF, 1 << voice); w(KON, 0 << voice);
+        tick(2);
+    }
+private:
+    /*SFML*/
+    bool onGetData(Chunk &data) override {
+        const int count = 2;
+        data.samples = &sfOut[sfCSample];
+        if (sfCSample + count <= sfOut.size()) {
+            data.sampleCount = count;
+            data.samples += count;
+            return true;
+        }
+        else {
+            data.sampleCount = sfOut.size() - sfCSample;
+            sfCSample = sfOut.size();
+            return false;
+        }
+    }
+    void onSeek(Time offset) override {
+        sfCSample = static_cast<std::size_t>(offset.asSeconds() * getSampleRate() * getChannelCount());
+    }
+
+    std::vector<std::int16_t> sfOut;
+    std::size_t sfCSample{};
+
+    /*DSP*/
+    SPC_DSP* d = new SPC_DSP;
+    char* ar = (char*)calloc(0x10000,sizeof(char));
+    uint dirposition = 0;
+};
