@@ -72,14 +72,12 @@ class SPC700 : public SoundStream {
 private:
     SPC_DSP* dsp = new SPC_DSP;
     char* aram = (char*)calloc(0x10000, sizeof(char));
-    SPC_DSP::sample_t* out = (SPC_DSP::sample_t*)calloc(64*32000, sizeof(SPC_DSP::sample_t));
-    SoundBuffer buf;
-    //buf.loadFromSamples(out, 64 * 32000, 2, 32000, { sf::SoundChannel::FrontLeft, sf::SoundChannel::FrontRight });
     unsigned smppos = 0x200;
     unsigned adir = 0xff<<8;
     unsigned dir = 0xff;
     unsigned vxkon = 0;
     size_t idk{};
+    std::vector<int16_t> samples;
     virtual bool onGetData(Chunk& data) override {
         dsp->set_output(out, 64*32000);
         return true;
@@ -88,18 +86,20 @@ private:
         idk = static_cast<size_t>(timeOffset.asSeconds());
     }
 public:
+    SPC_DSP::sample_t* out = (SPC_DSP::sample_t*)calloc(64*32000, sizeof(SPC_DSP::sample_t));
     SPC700() {
         dsp->init(aram);
         dsp->set_output(out, 64*32000);
         dsp->reset();
-        for (unsigned i = 0; i < 0x7F; i++) {
-            if (i == FLG)w(FLG, 0x60);
-            else if (i == ESA)w(ESA, 0x80);
-            else if (i == KOF)w(KOF, 0xff);
+        for (unsigned i = 0; i < 128; i++) {
+            if (i == FLG) w(FLG, 0x60);
+            else if (i == ESA) w(ESA, 0x80);
+            else if (i == KOF) w(KOF, 0xff);
             else w(i, 0);
         }w(MVOLL, 127); w(MVOLR, 127); w(DIR, dir);
-        buf.loadFromSamples(out, 64*32000,2,32000, { sf::SoundChannel::FrontLeft, sf::SoundChannel::FrontRight });
+        SoundBuffer buf(out, 64 * 32000, 2, 32000, { sf::SoundChannel::FrontLeft, sf::SoundChannel::FrontRight });
         initialize(2, 32000, {sf::SoundChannel::FrontLeft, sf::SoundChannel::FrontRight});
+        samples.assign(buf.getSamples(),buf.getSamples()+buf.getSampleCount());
     }
 
     void sample(unsigned char* sample, unsigned length, unsigned lppoint) {
@@ -110,7 +110,7 @@ public:
         aram[adir + 3] = hibit(lppoint + smppos);
         smppos += length;
     }
-    void pitch(unsigned voice, unsigned p) {
+    void pitch(unsigned p, unsigned voice) {
         w(vpl(voice), lobit(p));
         w(vph(voice), hibit(p) & 0x3f);
     }//(4096*(p/32000))&0x3fff
@@ -160,11 +160,13 @@ public:
 using namespace ImGui;
 int main() {
     SPC700 emu;
+    SoundBuffer buf(emu.out, 64 * 32000, 2, 32000, { sf::SoundChannel::FrontLeft, sf::SoundChannel::FrontRight });
+    Sound sound(buf);
     emu.sample(c700sqwave, len(c700sqwave), 9);
     emu.tick(emu.note(190,0,1,32000,0,127,ADSR+0xA,0xE0));
-    emu.endnote(0);
+    emu.endnote(2);
 
-    emu.play();
+    sound.play();
     sleep(seconds(1));
 }
 
