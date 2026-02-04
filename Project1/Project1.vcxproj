@@ -111,7 +111,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>sfml-window-d.lib;sfml-system-d.lib;sfml-graphics-d.lib;sfml-audio-d.lib;sfml-network-d.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>sfml-window-d.lib;sfml-system-d.lib;sfml-graphics-d.lib;sfml-audio-d.lib;sfml-network-d.lib;opengl32.lib;%(AdditionalDependencies);winmm.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\SFML\lib</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -129,7 +129,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>sfml-window.lib;sfml-system.lib;sfml-graphics.lib;sfml-audio.lib;sfml-network.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>sfml-window.lib;sfml-system.lib;sfml-graphics.lib;sfml-audio.lib;sfml-network.lib;opengl32.lib;%(AdditionalDependencies);winmm.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\SFML\lib</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -141,6 +141,7 @@
     <ClCompile Include="ImGui\imgui_tables.cpp" />
     <ClCompile Include="ImGui\imgui_widgets.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="olcMain.cpp" />
     <ClCompile Include="sndemu\dsp.cpp" />
     <ClCompile Include="sndemu\SNES_SPC.cpp" />
     <ClCompile Include="sndemu\SNES_SPC_misc.cpp" />
@@ -156,6 +157,7 @@
     <ClInclude Include="ImGui\imstb_rectpack.h" />
     <ClInclude Include="ImGui\imstb_textedit.h" />
     <ClInclude Include="ImGui\imstb_truetype.h" />
+    <ClInclude Include="olcNoiseMaker.h" />
     <ClInclude Include="sndemu\blargg_common.h" />
     <ClInclude Include="sndemu\blargg_config.h" />
     <ClInclude Include="sndemu\blargg_endian.h" />
@@ -166,6 +168,7 @@
     <ClInclude Include="sndemu\SPC_CPU.h" />
     <ClInclude Include="sndemu\SPC_DSP.h" />
     <ClInclude Include="sndemu\SPC_Filter.h" />
+    <ClInclude Include="stdc++.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="class SPC700.txt" />

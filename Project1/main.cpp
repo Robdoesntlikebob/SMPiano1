@@ -1,10 +1,7 @@
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <iostream>
+#include "stdc++.h"
 #include "sndemu/dsp.h"
 #include "sndemu/SPC_DSP.h"
-#include <SFML/Audio.hpp>
+#include "olcNoiseMaker.h"
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
 #include <SFML/System.hpp>
@@ -12,10 +9,6 @@
 #include <SFML/OpenGL.hpp>
 #include <imgui.h>
 #include <imgui-SFML.h>
-using namespace sf;
-int smppos = 0x200;
-int dirposition = 0;
-int vxkon = 0;
 
 /*necessary variables*/
 enum {
@@ -66,108 +59,112 @@ unsigned char c700sqwave[] = {
 #define print(x) std::cout << x << std::endl
 #define r(x) dsp->read(x)
 #define w(x,y) dsp->write(x,y)
+#define CHANNELS {sf::SoundChannel::FrontLeft, sf::SoundChannel::FrontRight}
 
 
-class SPC700 : public SoundStream {
-private:
-    SPC_DSP* dsp = new SPC_DSP;
-    char* aram = (char*)calloc(0x10000, sizeof(char));
-    unsigned smppos = 0x200;
-    unsigned adir = 0xff<<8;
-    unsigned dir = 0xff;
-    unsigned vxkon = 0;
-    size_t idk{};
-    std::vector<int16_t> samples;
-    virtual bool onGetData(Chunk& data) override {
-        dsp->set_output(out, 64*32000);
-        return true;
-    }
-    virtual void onSeek(Time timeOffset) override {
-        idk = static_cast<size_t>(timeOffset.asSeconds());
-    }
-public:
-    SPC_DSP::sample_t* out = (SPC_DSP::sample_t*)calloc(64*32000, sizeof(SPC_DSP::sample_t));
-    SPC700() {
-        dsp->init(aram);
-        dsp->set_output(out, 64*32000);
-        dsp->reset();
-        for (unsigned i = 0; i < 128; i++) {
-            if (i == FLG) w(FLG, 0x60);
-            else if (i == ESA) w(ESA, 0x80);
-            else if (i == KOF) w(KOF, 0xff);
-            else w(i, 0);
-        }w(MVOLL, 127); w(MVOLR, 127); w(DIR, dir);
-        SoundBuffer buf(out, 64 * 32000, 2, 32000, { sf::SoundChannel::FrontLeft, sf::SoundChannel::FrontRight });
-        initialize(2, 32000, {sf::SoundChannel::FrontLeft, sf::SoundChannel::FrontRight});
-        samples.assign(buf.getSamples(),buf.getSamples()+buf.getSampleCount());
-    }
+SPC_DSP* dsp = new SPC_DSP;
+char* aram = (char*)calloc(0x10000, sizeof(char));
+SPC_DSP::sample_t* out = (SPC_DSP::sample_t*)calloc(2, sizeof(SPC_DSP::sample_t));
+unsigned smppos = 0x200;
+unsigned dir = 0xff;
+unsigned adir = dir<<8;
+unsigned vxkon = 0;
 
-    void sample(unsigned char* sample, unsigned length, unsigned lppoint) {
-        memcpy(aram + smppos, sample, length);
-        aram[adir + 0] = lobit(smppos);
-        aram[adir + 1] = hibit(smppos);
-        aram[adir + 2] = lobit(lppoint + smppos);
-        aram[adir + 3] = hibit(lppoint + smppos);
-        smppos += length;
-    }
-    void pitch(unsigned p, unsigned voice) {
-        w(vpl(voice), lobit(p));
-        w(vph(voice), hibit(p) & 0x3f);
-    }//(4096*(p/32000))&0x3fff
+double rsamples(double dTime) {
+    return out[0], out[1];
+}
 
-    void tick(unsigned int ticks) {
-        dsp->run(5334 * ticks);
-    }
-    void tick() {
-        dsp->run(5334);
-    }
+void newsample(unsigned char* sample, unsigned length, unsigned lppoint) {
+    memcpy(aram + smppos, sample, length);
+    aram[adir + 0] = lobit(smppos);
+    aram[adir + 1] = hibit(smppos);
+    aram[adir + 2] = lobit(lppoint + smppos);
+    aram[adir + 3] = hibit(lppoint + smppos);
+    smppos += length;
+}
 
-    //usage: tick(note(length_in_ticks, voice, hz, p, srcn, voll, volr, adsr1, adsr2))
-    int note(uint length_in_ticks, uint voice, bool hz, uint p, uint srcn, uint voll, uint volr, uint adsr1, uint adsr2) {
-        vxkon++;
-        w(vvoll(voice), std::trunc(voll / vxkon));
-        w(vvolr(voice), std::trunc(volr / vxkon));
-        w(vsrcn(voice), 1);
-        if (hz == 1) pitch((4096 * (p / 32000)) & 0x3fff, voice);
-        else pitch(p & 0x3fff, voice);
-        w(vadsr1(voice), adsr1);
-        w(vadsr2(voice), adsr2);
-        w(KOF, 0 << voice); w(KON, 1 << voice);
-        return length_in_ticks;
+void wsample() {
+    dsp->run(32); dsp->set_output(out, len(out));
+}
+void wsample(unsigned samples) {
+    for (int i = 0; i < samples; ++i) {
+        wsample();
     }
+}
 
-    //usage: tick(note(length_in_ticks, voice, hz, p, srcn, vol, adsr1, adsr2))
-    int note(uint length_in_ticks, uint voice, bool hz, uint p, uint srcn, uint vol, uint adsr1, uint adsr2) {
-        vxkon++;
-        w(vvoll(voice), std::trunc(vol / vxkon));
-        w(vvolr(voice), std::trunc(vol / vxkon));
-        w(vsrcn(voice), 1);
-        if (hz == 1) pitch((4096 * (p / 32000)) & 0x3fff, voice);
-        else pitch(p & 0x3fff, voice);
-        w(vadsr1(voice), adsr1);
-        w(vadsr2(voice), adsr2);
-        w(KOF, 0 << voice); w(KON, 1 << voice);
-        return length_in_ticks;
+void tick() {
+    for (int i = 0;i < 166.6875; i++) {
+        wsample();
     }
-    void endnote(uint voice) {
-        w(KOF, 1 << voice); w(KON, 0 << voice);
-        tick(2);
+}
+void tick(unsigned ticks) {
+    for (int i = 0; i < ticks; i++) {
+        tick();
     }
-};
+}
 
+void pitch(unsigned p, unsigned voice) {
+    w(vpl(voice), lobit(p));
+    w(vph(voice), hibit(p) & 0x3f);
+}//(4096*(p/32000))&0x3fff
+
+
+
+//usage: tick(note(length_in_ticks, voice, hz, p, srcn, voll, volr, adsr1, adsr2))
+int note(uint length_in_ticks, uint voice, bool hz, uint p, uint srcn, uint voll, uint volr, uint adsr1, uint adsr2) {
+    vxkon++;
+    w(vvoll(voice), std::trunc(voll / vxkon));
+    w(vvolr(voice), std::trunc(volr / vxkon));
+    w(vsrcn(voice), 1);
+    if (hz == 1) pitch((4096 * (p / 32000)) & 0x3fff, voice);
+    else pitch(p & 0x3fff, voice);
+    w(vadsr1(voice), adsr1);
+    w(vadsr2(voice), adsr2);
+    w(KOF, 0 << voice); w(KON, 1 << voice);
+    return length_in_ticks;
+}
+
+//usage: tick(note(length_in_ticks, voice, hz, p, srcn, vol, adsr1, adsr2))
+int note(uint length_in_ticks, uint voice, bool hz, uint p, uint srcn, uint vol, uint adsr1, uint adsr2) {
+    vxkon++;
+    w(vvoll(voice), std::trunc(vol / vxkon));
+    w(vvolr(voice), std::trunc(vol / vxkon));
+    w(vsrcn(voice), 1);
+    if (hz == 1) pitch((4096 * (p / 32000)) & 0x3fff, voice);
+    else pitch(p & 0x3fff, voice);
+    w(vadsr1(voice), adsr1);
+    w(vadsr2(voice), adsr2);
+    w(KOF, 0 << voice); w(KON, 1 << voice);
+    return length_in_ticks;
+}
+void endnote(uint voice) {
+    w(KOF, 1 << voice); w(KON, 0 << voice);
+    tick(2);
+}
 
 /*main*/
 using namespace ImGui;
+using namespace sf;
 int main() {
-    SPC700 emu;
-    SoundBuffer buf(emu.out, 64 * 32000, 2, 32000, { sf::SoundChannel::FrontLeft, sf::SoundChannel::FrontRight });
-    Sound sound(buf);
-    emu.sample(c700sqwave, len(c700sqwave), 9);
-    emu.tick(emu.note(190,0,1,32000,0,127,ADSR+0xA,0xE0));
-    emu.endnote(2);
+    std::vector<std::wstring> devices = olcNoiseMaker<SPC_DSP::sample_t>::Enumerate();
+    olcNoiseMaker<SPC_DSP::sample_t> sound(devices[0],32000U,2U,1U,2U);
+    dsp->init(aram);
+    dsp->set_output(out, len(out));
+    dsp->reset();
+    for (unsigned i = 0; i < 128; i++) {
+        if (i == FLG) w(FLG, 0x60);
+        else if (i == ESA) w(ESA, 0x80);
+        else if (i == KOF) w(KOF, 0xff);
+        else w(i, 0);
+    }w(MVOLL, 127); w(MVOLR, 127); w(DIR, dir);
+    sound.SetUserFunction(rsamples);
+    std::cout << "SPC700 playing note B3 Square wave..." << std::endl;
+    newsample(c700sqwave, len(c700sqwave), 9);
+    tick(note(190,0,1,32000,0,127,ADSR+0xA,0xE0));
+    endnote(2);
+    while (1) {
 
-    sound.play();
-    sleep(seconds(1));
+    }
 }
 
 /*
