@@ -7,6 +7,7 @@
 #include <SFML/System.hpp>
 #include <SFML/Network.hpp>
 #include <SFML/OpenGL.hpp>
+#include <SFML/Audio.hpp>
 #include <imgui.h>
 #include <imgui-SFML.h>
 
@@ -64,14 +65,14 @@ unsigned char c700sqwave[] = {
 
 SPC_DSP* dsp = new SPC_DSP;
 char* aram = (char*)calloc(0x10000, sizeof(char));
-SPC_DSP::sample_t* out = (SPC_DSP::sample_t*)calloc(2, sizeof(SPC_DSP::sample_t));
+SPC_DSP::sample_t* out = (SPC_DSP::sample_t*)calloc(32*32000, sizeof(SPC_DSP::sample_t));
 unsigned smppos = 0x200;
 unsigned dir = 0xff;
 unsigned adir = dir<<8;
 unsigned vxkon = 0;
 
 double rsamples(double dTime) {
-    return out[0], out[1];
+    return out[(int)dTime++], out[(int)dTime++];
 }
 
 void newsample(unsigned char* sample, unsigned length, unsigned lppoint) {
@@ -93,14 +94,10 @@ void wsample(unsigned samples) {
 }
 
 void tick() {
-    for (int i = 0;i < 166.6875; i++) {
-        wsample();
-    }
+    dsp->run(5335);
 }
 void tick(unsigned ticks) {
-    for (int i = 0; i < ticks; i++) {
-        tick();
-    }
+    dsp->run(5335*ticks);
 }
 
 void pitch(unsigned p, unsigned voice) {
@@ -142,14 +139,14 @@ void endnote(uint voice) {
     tick(2);
 }
 
-/*main*/
+/*not main lol*/
 using namespace ImGui;
 using namespace sf;
-int main() {
+int olc() {
     std::vector<std::wstring> devices = olcNoiseMaker<SPC_DSP::sample_t>::Enumerate();
-    olcNoiseMaker<SPC_DSP::sample_t> sound(devices[0],32000U,2U,1U,2U);
+    olcNoiseMaker<SPC_DSP::sample_t> sound(devices[0],32000U,2U,1U,32000U);
     dsp->init(aram);
-    dsp->set_output(out, len(out));
+    dsp->set_output(out, 32 * 32000);
     dsp->reset();
     for (unsigned i = 0; i < 128; i++) {
         if (i == FLG) w(FLG, 0x60);
@@ -162,9 +159,36 @@ int main() {
     newsample(c700sqwave, len(c700sqwave), 9);
     tick(note(190,0,1,32000,0,127,ADSR+0xA,0xE0));
     endnote(2);
-    while (1) {
+    while (1) {}
+    return 0;
+}
 
-    }
+int sfml() {
+    dsp->init(aram);
+    dsp->set_output(out, 32 * 32000);
+    dsp->reset();
+    for (unsigned i = 0; i < 128; i++) {
+        if (i == FLG) w(FLG, 0x60);
+        else if (i == ESA) w(ESA, 0x80);
+        else if (i == KOF) w(KOF, 0xff);
+        else w(i, 0);
+    }w(MVOLL, 127); w(MVOLR, 127); w(DIR, dir); w(FLG, ECEN);
+
+    newsample(c700sqwave, len(c700sqwave), 9);
+    tick(note(190, 0, 1, 32000, 0, 127, ADSR + 0xA, 0xE0));
+    endnote(2);
+
+    SoundBuffer buf(out, 32*32000, 2, 32000, CHANNELS);
+    Sound snd(buf);
+    std::cout << "SPC700 playing note B3 Square wave..." << std::endl;
+    snd.play();
+    sleep(seconds(2));
+    return 0;
+}
+
+int main() {
+    sfml();
+    //olc();
 }
 
 /*
