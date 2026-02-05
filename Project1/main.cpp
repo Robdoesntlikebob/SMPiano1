@@ -1,300 +1,140 @@
-#include "stdc++.h"
-#include "sndemu/dsp.h"
-#include "sndemu/SPC_DSP.h"
-#include "olcNoiseMaker.h"
-#include <SFML/Window.hpp>
-#include <SFML/Graphics.hpp>
-#include <SFML/System.hpp>
-#include <SFML/Network.hpp>
-#include <SFML/OpenGL.hpp>
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include "sndEMU/dsp.h"
 #include <SFML/Audio.hpp>
-#include <imgui.h>
-#include <imgui-SFML.h>
-
-/*necessary variables*/
-enum {
-    MVOLL = 0x0C,
-    MVOLR = 0x1C,
-    FLG = 0x6C,
-    DIR = 0x5D,
-    KON = 0x4C,
-    KOF = 0x5C,
-    ADSR = 128,
-    PMON = 0x2D,
-    NON = 0x3D,
-    ESA = 0x6D,
-    RESET = 128,
-    MUTE = 64,
-    ECEN = 32,
-    EON = 0x4D,
-};
-typedef unsigned int uint;
 
 unsigned char BRR_SAWTOOTH[] = {
     0xB0, 0xFF, 0xEE, 0xDD, 0xCC, 0xBB, 0xAA, 0x99, 0x88,
     0xB3, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x00,
 };
 
-unsigned char c700sqwave[] = {
-    0b10000100, 0x00, 0x00, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77,
-    0b11000000, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99,
-    0b11000000, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99,
-    0b11000000, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77,
-    0b11000011, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77
+// Constants for the DSP registers.
+enum {
+    MVOLL = 0x0C,
+    MVOLR = 0x1C,
+    FLG = 0x6C,
+    DIR = 0x5D,
+    V0VOLL = 0x00,
+    V0VOLR = 0x01,
+    V0PITCHL = 0x02,
+    V0PITCHH = 0x03,
+    V0SRCN = 0x04,
+    V0ADSR1 = 0x05,
+    V0ADSR2 = 0x06,
+    KON = 0x4C,
 };
 
-// Constants for the DSP registers.
-#define vvoll(n) (n<<4)
-#define vvolr(n) (n<<4)+1
-#define vpl(n) (n<<4)+2
-#define vph(n) (n<<4)+3
-#define vsrcn(n) (n<<4)+4
-#define vadsr1(n) (n<<4)+5
-#define vadsr2(n) (n<<4)+6
-#define vgain(n) (n<<4)+7
-#define venvx(n) (n<<4)+8
-#define voutx(n) (n<<4)+9
-#define len(x) *(&x+1)-x
-#define lobit(x) x&0xff
-#define hibit(x) x>>8
-#define print(x) std::cout << x << std::endl
-#define r(x) dsp->read(x)
-#define w(x,y) dsp->write(x,y)
-#define CHANNELS {sf::SoundChannel::FrontLeft, sf::SoundChannel::FrontRight}
-
-
-SPC_DSP* dsp = new SPC_DSP;
-char* aram = (char*)calloc(0x10000, sizeof(char));
-spc_dsp_sample_t* out = (spc_dsp_sample_t*)calloc(2*32000, sizeof(spc_dsp_sample_t));
-unsigned smppos = 0x200;
-unsigned dir = 0xff;
-unsigned adir = dir<<8;
-unsigned vxkon = 0;
-unsigned dirposition = 0;
-
-double rsamples(double dTime) {
-    return out[(int)dTime++], out[(int)dTime++];
-}
-
-void newsample(unsigned char* sample, unsigned length, unsigned lppoint) {
-    memcpy(aram + smppos, sample, length);
-    aram[adir + dirposition] = lobit(smppos);
-    aram[adir + dirposition] = hibit(smppos);
-    aram[adir + dirposition] = lobit(lppoint + smppos);
-    aram[adir + dirposition] = hibit(lppoint + smppos);
-    smppos += length;
-}
-
-void wsample() {
-    dsp->run(32); dsp->set_output(out, len(out));
-}
-void wsample(unsigned samples) {
-    for (int i = 0; i < samples; ++i) {
-        wsample();
+int main(int argc, char* argv[]) {
+    // Allocate a DSP object
+    SPC_DSP* dsp = spc_dsp_new();
+    if (dsp == NULL) {
+        fprintf(stderr, "%s\n", "Could not allocate DSP");
+        return 1;
     }
-}
 
-void tick() {
-    dsp->run(5335);
-}
-void tick(unsigned ticks) {
-    dsp->run(5335*ticks);
-}
-
-void pitch(unsigned p, unsigned voice) {
-    w(vpl(voice), lobit(p));
-    w(vph(voice), hibit(p) & 0x3f);
-}//(4096*(p/32000))&0x3fff
-
-
-
-//usage: tick(note(length_in_ticks, voice, hz, p, srcn, voll, volr, adsr1, adsr2))
-int note(uint length_in_ticks, uint voice, bool hz, uint p, uint srcn, uint voll, uint volr, uint adsr1, uint adsr2) {
-    vxkon++;
-    w(vvoll(voice), std::trunc(voll / vxkon));
-    w(vvolr(voice), std::trunc(volr / vxkon));
-    w(vsrcn(voice), 1);
-    if (hz == 1) pitch((4096 * (p / 32000)) & 0x3fff, voice);
-    else pitch(p & 0x3fff, voice);
-    w(vadsr1(voice), adsr1);
-    w(vadsr2(voice), adsr2);
-    w(KOF, 0 << voice); w(KON, 1 << voice);
-    return length_in_ticks;
-}
-
-//usage: tick(note(length_in_ticks, voice, hz, p, srcn, vol, adsr1, adsr2))
-int note(uint length_in_ticks, uint voice, bool hz, uint p, uint srcn, uint vol, uint adsr1, uint adsr2) {
-    vxkon++;
-    w(vvoll(voice), std::trunc(vol / vxkon));
-    w(vvolr(voice), std::trunc(vol / vxkon));
-    w(vsrcn(voice), 1);
-    if (hz == 1) pitch((4096 * (p / 32000)) & 0x3fff, voice);
-    else pitch(p & 0x3fff, voice);
-    w(vadsr1(voice), adsr1);
-    w(vadsr2(voice), adsr2);
-    w(KOF, 0 << voice); w(KON, 1 << voice);
-    return length_in_ticks;
-}
-void endnote(uint voice) {
-    w(KOF, 1 << voice); w(KON, 0 << voice);
-    tick(2);
-}
-
-/*not main lol*/
-using namespace ImGui;
-using namespace sf;
-void olc() {
-    std::vector<std::wstring> devices = olcNoiseMaker<SPC_DSP::sample_t>::Enumerate();
-    olcNoiseMaker<SPC_DSP::sample_t> sound(devices[0],32000U,2U,1U,32000U);
-    dsp->init(aram);
-    dsp->set_output(out, 32000);
-    dsp->reset();
-    for (unsigned i = 0; i < 128; i++) {
-        if (i == FLG) w(FLG, 0x60);
-        else if (i == ESA) w(ESA, 0x80);
-        else if (i == KOF) w(KOF, 0xff);
-        else w(i, 0);
-    }w(MVOLL, 127); w(MVOLR, 127); w(DIR, dir);
-    sound.SetUserFunction(rsamples);
-    std::cout << "SPC700 playing note B3 Square wave..." << std::endl;
-    newsample(c700sqwave, len(c700sqwave), 9);
-    tick(note(190,0,1,32000,0,127,ADSR+0xA,0xE0));
-    endnote(2);
-    while (1) {}
-}
-
-void sfml() {
-    dsp->init(aram);
-    dsp->set_output(out, 32000);
-    dsp->reset();
-    newsample(c700sqwave, len(c700sqwave), 9);
-    for (int i = 0; i < 128; i++) {
-        if (i == FLG) w(FLG, 0x60);
-        else if (i == ESA) w(ESA, 0x80);
-        else if (i == KOF) w(KOF, 0xff);
-        else w(i, 0);
-    }w(MVOLL, 127); w(MVOLR, 127); w(DIR, dir); w(FLG, ECEN);
-
-    note(190, 0, 1, 32000, 0, 127, ADSR + 0xA, 0xE0);
-    dsp->run(32000);
-    endnote(2);
-
-    SoundBuffer buf(out, 2*32000, 2, 32000, CHANNELS);
-    Sound snd(buf);
-    std::cout << "SPC700 playing note B3 Square wave..." << std::endl;
-    snd.play();
-    sleep(seconds(2));
-    std::cout << "Sample count: " << dsp->sample_count() / 2 << std::endl;
-    for (int i = 0; i < dsp->sample_count() / 2; i++) {
-        printf("%i: %04X, %04X\n", i, out[i], out[i+1] );
+    // Allocate some RAM for it.
+    char* aram = (char*)calloc(0x10000, sizeof(char)); // 64KB
+    if (aram == NULL) {
+        fprintf(stderr, "%s\n", "Could not allocate ARAM");
+        return 1;
     }
-}
 
-void sfml2() {
-    /*necessary variables*/
-    typedef unsigned int uint;
-    uint smppos = 0x200;
-    SPC_DSP* dsp = new SPC_DSP;
-    char* aram = (char*)malloc(0x10000);
-    unsigned int dirposition = 0;
+    // Connect the ARAM to the DSP.
+    spc_dsp_init(dsp, aram);
 
-    /*initialising DSP and registers*/
-    if (dsp == NULL) { std::cout << "no DSP lol" << std::endl; }
-    dsp->init(aram);
-    if (aram == NULL) { std::cout << "no ARAM lol" << std::endl; }
-
-    /*DSP*/
+    // Allocate an output buffer for audio samples.
+    // The DSP generates stereo samples at 32kHz,
+    // let's reserve room for a second of audio.
     int sample_count = 32000;
-    spc_dsp_sample_t* output = (spc_dsp_sample_t*)malloc(2 * sample_count * sizeof(spc_dsp_sample_t)); //buffer
-    dsp->set_output(output, sample_count);
-    if (output == NULL) { print("you are fucking stupid"); std::terminate(); }
-    dsp->reset();
+    spc_dsp_sample_t* output =
+        (spc_dsp_sample_t*)calloc(2 * sample_count, sizeof(spc_dsp_sample_t));
+    if (output == NULL) {
+        fprintf(stderr, "%s\n", "Could not allocate output buffer");
+        return 1;
+    }
 
+    // Connect the output buffer to the DSP.
+    spc_dsp_set_output(dsp, output, sample_count);
 
-    /*load instruments*/
+    // Now everything's connected, turn it on.
+    spc_dsp_reset(dsp);
 
-    newsample(c700sqwave, len(c700sqwave),9);
+    // Load our instrument into the beginning of ARAM.
+    memcpy(aram, BRR_SAWTOOTH, sizeof(BRR_SAWTOOTH) / sizeof(unsigned char));
 
+    // Set up an instrument table that tells the DSP
+    // where to find the each instrument in ARAM.
+    // The table has to start on an address that's a multiple of 0x100,
+    // and since BRR_SAWTOOTH is a lot less than 0x100 bytes long,
+    // we can put the table at 0x100.
 
-    /*hopefully creating the DSP sound*/
-    w(DIR, 0xff);
-    w(MVOLL, 0x80);
-    w(MVOLR, 0x80);
-    w(vvoll(0), 0x80);
-    w(vvolr(0), 0x80);
-    w(FLG, 0x20);
-    w(vsrcn(0), 0);
-    w(vpl(0), 0x00);
-    w(vph(0), 0x10);
-    w(vadsr1(0), 0x0f);
-    w(vadsr2(0), 0xe0);
-    w(KON, 1);
-    dsp->run(32 * 32000 * 2);
+    // There's only one entry in our table.
+    aram[0x100] = 0x00; // sample start address low byte
+    aram[0x101] = 0x00; // sample start address high byte
+    aram[0x102] = 0x00; // sample loop address low byte
+    aram[0x103] = 0x00; // sample loop address high byte
 
-    /*debug (remove when not needed)*/
-    int generated_count = dsp->sample_count() / 2;
+    // Tell the DSP that the table of samples starts at 0x0100
+    spc_dsp_write(dsp, DIR, 0x01);
+
+    // Tell the DSP to set the channel volume to max.
+    spc_dsp_write(dsp, V0VOLL, 0x80);
+    spc_dsp_write(dsp, V0VOLR, 0x80);
+
+    // Tell the DSP to set the master volume to max.
+    spc_dsp_write(dsp, MVOLL, 0x80);
+    spc_dsp_write(dsp, MVOLR, 0x80);
+
+    // Tell the DSP to unmute audio output.
+    spc_dsp_write(dsp, FLG, 0x20);
+
+    // Tell the DSP that voice 0 should play sample 0.
+    spc_dsp_write(dsp, V0SRCN, 0);
+
+    // Tell the DSP to play the sample at the original pitch.
+    spc_dsp_write(dsp, V0PITCHL, 0x00);
+    spc_dsp_write(dsp, V0PITCHH, 0x10);
+
+    // Set up an ADSR envelope for this voice.
+    // We don't want anything complicated,
+    // just start at max volume and stay there until release.
+    spc_dsp_write(dsp, V0ADSR1, 0x0F);
+    spc_dsp_write(dsp, V0ADSR2, 0xE0);
+
+    // Tell the DSP to activate voice 0.
+    spc_dsp_write(dsp, KON, 0x01);
+
+    // Every 32 clocks, a two-channel sample is written to the output buffer,
+    // so if we run for 320 clocks, we should get 10 two-channel samples.
+    // The DSP only checks for KON every other sample,
+    // after KON it spends five samples doing setup work,
+    // our instrument is 16 samples long,
+    // and the DSP outputs a sample every 32 clocks.
+    // So to see a full loop of our instrument:
+    spc_dsp_run(dsp, 32000*32);
+
+    // How many samples did we actually get?
+    // Note that the library counts a two-channel sample as "two samples".
+    int generated_count = spc_dsp_sample_count(dsp) / 2;
     printf("Generated %d samples\n", generated_count);
 
-    for (int i = 0; i < 10; i++) {
+    // Display the samples the DSP produced
+    for (int i = 0; i < generated_count; i++) {
         printf("%02d: %04hx %04hx\n", i, output[i * 2], output[1 + i * 2]);
     }
+    printf("\n");
 
-
-    /*SFML side of playing sound*/
     sf::SoundBuffer buf(output, 32000, 2, 32000, { sf::SoundChannel::FrontLeft,sf::SoundChannel::FrontRight });
-    sf::SoundBuffer bufwav("its gonna sound like shit trust me bro.wav");
     sf::Sound snd(buf);
-    snd.setLooping(0);
     snd.play();
-    sf::sleep(sf::milliseconds(2000));
+    sf::sleep(sf::seconds(0.5));
+    spc_dsp_set_output(dsp, output, sample_count);
+    spc_dsp_run(dsp, 32000 * 32);
+    buf.loadFromSamples(output, 32000, 2, 32000, { sf::SoundChannel::FrontLeft,sf::SoundChannel::FrontRight });
+    snd.setBuffer(buf);
+    sf::sleep(sf::seconds(0.5));
+
+    // We're all done!
+    return 0;
 }
-
-int main() {
-    //sfml();
-    sfml2();
-    //olc();
-}
-
-/*
-    sf::RenderWindow window(sf::VideoMode({ 1280, 720 }), "SMPiano");
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO();
-    ImGui::SFML::Init(window, false);
-    io.Fonts->Clear();
-    ImFont* SNES = io.Fonts->AddFontFromFileTTF("SNES.ttf", 18);
-    ImFont* REG = io.Fonts->AddFontFromFileTTF("C:/Windows/Fonts/Arial.ttf", 11);
-    SFML::UpdateFontTexture();
-    sf::Clock deltaClock;
-    while (window.isOpen()) {
-        while (const auto event = window.pollEvent()) {
-            ImGui::SFML::ProcessEvent(window, *event);
-#define event(e) event->is<sf::Event::##e>()
-            if (event(Closed)) {
-                window.close();
-            }
-        }
-
-
-        SFML::Update(window, deltaClock.restart());
-
-        SetNextWindowSize(ImVec2(window.getSize()));
-        SetNextWindowPos(ImVec2(0,0));
-        Begin("Main", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar);
-
-        //PushFont(SNES);
-        if (Button("Delete System32")) print("System32 Deleted bwahahha >:3");
-        if (Button("Load C700SQWAVE")) emu.newsample(c700sqwave, len(c700sqwave), 9);
-        if (Button("Play")) {
-            print("Note supposedly playing...");
-        }
-        //PopFont();
-
-        //End
-        End();
-        window.clear();
-        ImGui::SFML::Render(window);
-        window.display();
-    }
-    ImGui::SFML::Shutdown();
-*/
-
