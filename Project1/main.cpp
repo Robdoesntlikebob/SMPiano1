@@ -65,11 +65,12 @@ unsigned char c700sqwave[] = {
 
 SPC_DSP* dsp = new SPC_DSP;
 char* aram = (char*)calloc(0x10000, sizeof(char));
-SPC_DSP::sample_t* out = (SPC_DSP::sample_t*)calloc(32*32000, sizeof(SPC_DSP::sample_t));
+spc_dsp_sample_t* out = (spc_dsp_sample_t*)calloc(2*32000, sizeof(spc_dsp_sample_t));
 unsigned smppos = 0x200;
 unsigned dir = 0xff;
 unsigned adir = dir<<8;
 unsigned vxkon = 0;
+unsigned dirposition = 0;
 
 double rsamples(double dTime) {
     return out[(int)dTime++], out[(int)dTime++];
@@ -77,10 +78,10 @@ double rsamples(double dTime) {
 
 void newsample(unsigned char* sample, unsigned length, unsigned lppoint) {
     memcpy(aram + smppos, sample, length);
-    aram[adir + 0] = lobit(smppos);
-    aram[adir + 1] = hibit(smppos);
-    aram[adir + 2] = lobit(lppoint + smppos);
-    aram[adir + 3] = hibit(lppoint + smppos);
+    aram[adir + dirposition] = lobit(smppos);
+    aram[adir + dirposition] = hibit(smppos);
+    aram[adir + dirposition] = lobit(lppoint + smppos);
+    aram[adir + dirposition] = hibit(lppoint + smppos);
     smppos += length;
 }
 
@@ -142,11 +143,11 @@ void endnote(uint voice) {
 /*not main lol*/
 using namespace ImGui;
 using namespace sf;
-int olc() {
+void olc() {
     std::vector<std::wstring> devices = olcNoiseMaker<SPC_DSP::sample_t>::Enumerate();
     olcNoiseMaker<SPC_DSP::sample_t> sound(devices[0],32000U,2U,1U,32000U);
     dsp->init(aram);
-    dsp->set_output(out, 32 * 32000);
+    dsp->set_output(out, 32000);
     dsp->reset();
     for (unsigned i = 0; i < 128; i++) {
         if (i == FLG) w(FLG, 0x60);
@@ -160,34 +161,97 @@ int olc() {
     tick(note(190,0,1,32000,0,127,ADSR+0xA,0xE0));
     endnote(2);
     while (1) {}
-    return 0;
 }
 
-int sfml() {
+void sfml() {
     dsp->init(aram);
-    dsp->set_output(out, 32 * 32000);
+    dsp->set_output(out, 32000);
     dsp->reset();
-    for (unsigned i = 0; i < 128; i++) {
+    newsample(c700sqwave, len(c700sqwave), 9);
+    for (int i = 0; i < 128; i++) {
         if (i == FLG) w(FLG, 0x60);
         else if (i == ESA) w(ESA, 0x80);
         else if (i == KOF) w(KOF, 0xff);
         else w(i, 0);
     }w(MVOLL, 127); w(MVOLR, 127); w(DIR, dir); w(FLG, ECEN);
 
-    newsample(c700sqwave, len(c700sqwave), 9);
-    tick(note(190, 0, 1, 32000, 0, 127, ADSR + 0xA, 0xE0));
+    note(190, 0, 1, 32000, 0, 127, ADSR + 0xA, 0xE0);
+    dsp->run(32000);
     endnote(2);
 
-    SoundBuffer buf(out, 32*32000, 2, 32000, CHANNELS);
+    SoundBuffer buf(out, 2*32000, 2, 32000, CHANNELS);
     Sound snd(buf);
     std::cout << "SPC700 playing note B3 Square wave..." << std::endl;
     snd.play();
     sleep(seconds(2));
-    return 0;
+    std::cout << "Sample count: " << dsp->sample_count() / 2 << std::endl;
+    for (int i = 0; i < dsp->sample_count() / 2; i++) {
+        printf("%i: %04X, %04X\n", i, out[i], out[i+1] );
+    }
+}
+
+void sfml2() {
+    /*necessary variables*/
+    typedef unsigned int uint;
+    uint smppos = 0x200;
+    SPC_DSP* dsp = new SPC_DSP;
+    char* aram = (char*)malloc(0x10000);
+    unsigned int dirposition = 0;
+
+    /*initialising DSP and registers*/
+    if (dsp == NULL) { std::cout << "no DSP lol" << std::endl; }
+    dsp->init(aram);
+    if (aram == NULL) { std::cout << "no ARAM lol" << std::endl; }
+
+    /*DSP*/
+    int sample_count = 32000;
+    spc_dsp_sample_t* output = (spc_dsp_sample_t*)malloc(2 * sample_count * sizeof(spc_dsp_sample_t)); //buffer
+    dsp->set_output(output, sample_count);
+    if (output == NULL) { print("you are fucking stupid"); std::terminate(); }
+    dsp->reset();
+
+
+    /*load instruments*/
+
+    newsample(c700sqwave, len(c700sqwave),9);
+
+
+    /*hopefully creating the DSP sound*/
+    w(DIR, 0xff);
+    w(MVOLL, 0x80);
+    w(MVOLR, 0x80);
+    w(vvoll(0), 0x80);
+    w(vvolr(0), 0x80);
+    w(FLG, 0x20);
+    w(vsrcn(0), 0);
+    w(vpl(0), 0x00);
+    w(vph(0), 0x10);
+    w(vadsr1(0), 0x0f);
+    w(vadsr2(0), 0xe0);
+    w(KON, 1);
+    dsp->run(32 * 32000 * 2);
+
+    /*debug (remove when not needed)*/
+    int generated_count = dsp->sample_count() / 2;
+    printf("Generated %d samples\n", generated_count);
+
+    for (int i = 0; i < 10; i++) {
+        printf("%02d: %04hx %04hx\n", i, output[i * 2], output[1 + i * 2]);
+    }
+
+
+    /*SFML side of playing sound*/
+    sf::SoundBuffer buf(output, 32000, 2, 32000, { sf::SoundChannel::FrontLeft,sf::SoundChannel::FrontRight });
+    sf::SoundBuffer bufwav("its gonna sound like shit trust me bro.wav");
+    sf::Sound snd(buf);
+    snd.setLooping(0);
+    snd.play();
+    sf::sleep(sf::milliseconds(2000));
 }
 
 int main() {
-    sfml();
+    //sfml();
+    sfml2();
     //olc();
 }
 

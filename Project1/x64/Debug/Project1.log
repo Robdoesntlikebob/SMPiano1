@@ -8,26 +8,27 @@ C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\sndemu\SPC_DS
 C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\sndemu\SPC_DSP.h(238,57): warning C4244: 'return': conversion from '__int64' to 'int', possible loss of data
   (compiling source file 'main.cpp')
   
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(83,22): warning C4554: '>>': check operator precedence for possible error; use parentheses to clarify precedence
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(88,40): warning C4244: 'argument': conversion from '__int64' to 'int', possible loss of data
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(91,23): warning C4018: '<': signed/unsigned mismatch
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(113,5): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
+C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(84,32): warning C4554: '>>': check operator precedence for possible error; use parentheses to clarify precedence
+C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(89,40): warning C4244: 'argument': conversion from '__int64' to 'int', possible loss of data
+C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(92,23): warning C4018: '<': signed/unsigned mismatch
 C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(114,5): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(127,5): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
+C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(115,5): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
 C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(128,5): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(159,27): warning C4244: 'argument': conversion from '__int64' to 'unsigned int', possible loss of data
-C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(177,27): warning C4244: 'argument': conversion from '__int64' to 'unsigned int', possible loss of data
+C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(129,5): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
+C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(160,27): warning C4244: 'argument': conversion from '__int64' to 'unsigned int', possible loss of data
+C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(170,27): warning C4244: 'argument': conversion from '__int64' to 'unsigned int', possible loss of data
+C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(216,27): warning C4244: 'argument': conversion from '__int64' to 'unsigned int', possible loss of data
 C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\olcNoiseMaker.h(106,18): warning C4244: 'initializing': conversion from '__int64' to 'int', possible loss of data
   (compiling source file 'main.cpp')
       C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\olcNoiseMaker.h(106,18):
       the template instantiation context (the oldest one first) is
-          C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(146,75):
+          C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(147,75):
           see reference to class template instantiation 'olcNoiseMaker<SPC_DSP::sample_t>' being compiled
           C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\olcNoiseMaker.h(86,7):
           while compiling class template member function 'bool olcNoiseMaker<SPC_DSP::sample_t>::Create(std::wstring,unsigned int,unsigned int,unsigned int,unsigned int)'
               C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\olcNoiseMaker.h(78,9):
               see the first reference to 'olcNoiseMaker<SPC_DSP::sample_t>::Create' in 'olcNoiseMaker<SPC_DSP::sample_t>::olcNoiseMaker'
-              C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(147,43):
+              C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\Project1\main.cpp(148,43):
               see the first reference to 'olcNoiseMaker<SPC_DSP::sample_t>::olcNoiseMaker' in 'olc'
   
   Project1.vcxproj -> C:\Users\thech\Documents\GitHub\snes-daw-cpp--attempt-69-\x64\Debug\SMPiano.exe
