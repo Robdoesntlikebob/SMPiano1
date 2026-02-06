@@ -27,13 +27,18 @@ enum {
 };
 
 class SPC700 : public sf::SoundStream {
-public:
+private:
     SPC_DSP* dsp = spc_dsp_new();
     char* aram = (char*)calloc(0x1000, sizeof(char));
-    spc_dsp_sample_t* out = (spc_dsp_sample_t*)calloc(2 * 32, sizeof(spc_dsp_sample_t));
+    int count = 32;
+    spc_dsp_sample_t* out = (spc_dsp_sample_t*)calloc(2 * count, sizeof(spc_dsp_sample_t));
+    bool onGetData(Chunk& data) override { spc_dsp_set_output(dsp, out, 32); return true; }
+    void onSeek(sf::Time x)override{}
     unsigned dtpos = 0;
     unsigned dir = 0xff;
     unsigned pos = 0x200;
+    unsigned counter = 0;
+public:
     #define lobit(x) x&255
     #define hibit(x) x>>8
     #define voll(x) (x<<4)
@@ -51,7 +56,7 @@ public:
     #define run(x) spc_dsp_run(dsp,x);
     SPC700() {
         spc_dsp_init(dsp, aram);
-        spc_dsp_set_output(dsp, out, 32);
+        spc_dsp_set_output(dsp, out, count);
         spc_dsp_reset(dsp);
         w(DIR, 0xff);
         w(voll(0), 128);
@@ -69,17 +74,20 @@ public:
         memcpy(aram + pos, sample, length);
         aram[dir + dtpos] = (pos) & 0xff;
     }
-    void testplay(unsigned times) {
-        w(KON, 0);
-        run(32 * times);
+    void testplay() {
+        w(KON, 1);
+        run(32);
     }
-private:
-    bool onGetData(Chunk& data) override { spc_dsp_set_output(dsp, out, 32); return true; }
-    void onSeek(sf::Time x)override{}
+    void debug() {
+        for (int i = 0; i < spc_dsp_sample_count(dsp); i++) {
+            printf("Samples:\n0x%04X, 0x%04X", out[i * 2], out[1 + i * 2]);
+        }
+    }
 };
 
 int main(int argc, char* argv[]) {
-    SPC700* emu = new SPC700;
-    emu->newsample(BRR_SAWTOOTH, len(BRR_SAWTOOTH),0);
-    emu->testplay(128);
+    SPC700 emu;
+    emu.newsample(BRR_SAWTOOTH, len(BRR_SAWTOOTH),0);
+    emu.testplay();
+    emu.debug();
 }
