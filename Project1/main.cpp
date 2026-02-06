@@ -1,6 +1,5 @@
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
+#include "stdc++.h"
+#include <iostream>
 #include "sndEMU/dsp.h"
 #include <SFML/Audio.hpp>
 
@@ -9,6 +8,7 @@ unsigned char BRR_SAWTOOTH[] = {
     0xB3, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x00,
 };
 #define len(x) *(&x+1)-x
+#define print(x) std::cout << x << std::endl
 
 // Constants for the DSP registers.
 enum {
@@ -30,7 +30,7 @@ class SPC700 : public sf::SoundStream {
 private:
     SPC_DSP* dsp = spc_dsp_new();
     char* aram = (char*)calloc(0x1000, sizeof(char));
-    int count = 32;
+    int count = 32000;
     spc_dsp_sample_t* out = (spc_dsp_sample_t*)calloc(2 * count, sizeof(spc_dsp_sample_t));
     bool onGetData(Chunk& data) override { spc_dsp_set_output(dsp, out, 32); return true; }
     void onSeek(sf::Time x)override{}
@@ -56,7 +56,7 @@ public:
     #define run(x) spc_dsp_run(dsp,x);
     SPC700() {
         spc_dsp_init(dsp, aram);
-        spc_dsp_set_output(dsp, out, count);
+        spc_dsp_set_output(dsp, out, 2*count);
         spc_dsp_reset(dsp);
         w(DIR, 0xff);
         w(voll(0), 128);
@@ -69,25 +69,32 @@ public:
         w(ph(0), 0x10);
         w(adsr1(0), 0x0F);
         w(adsr2(0), 0xE0); //move some of them to note function if succeeded
+        initialize(2, 32000, { sf::SoundChannel::FrontLeft,sf::SoundChannel::FrontRight });
     }
-    void newsample(unsigned char* sample, size_t length, unsigned loop) {
+    void newsample(unsigned char* sample, unsigned length, unsigned loop) {
         memcpy(aram + pos, sample, length);
-        aram[dir + dtpos] = (pos) & 0xff;
+        aram[dir + dtpos] = lobit(pos); dtpos++;
+        aram[dir + dtpos] = hibit(pos); dtpos++;
+        aram[dir + dtpos] = hibit(loop+pos); dtpos++;
+        aram[dir + dtpos] = hibit(loop+pos); dtpos++;
+        pos += length;
     }
     void testplay() {
         w(KON, 1);
-        run(32);
+        run(512000);
     }
     void debug() {
-        for (int i = 0; i < spc_dsp_sample_count(dsp); i++) {
-            printf("Samples:\n0x%04X, 0x%04X", out[i * 2], out[1 + i * 2]);
-        }
+        //for (int i = 0; i < spc_dsp_sample_count(dsp)/2; i++) {
+        //    printf("0x%04X, 0x%04X\n", out[i * 2], out[1 + i * 2]);
+        //}
+        print(spc_dsp_sample_count(dsp));
     }
 };
 
-int main(int argc, char* argv[]) {
+int main() {
     SPC700 emu;
     emu.newsample(BRR_SAWTOOTH, len(BRR_SAWTOOTH),0);
     emu.testplay();
+    emu.play();
     emu.debug();
 }
