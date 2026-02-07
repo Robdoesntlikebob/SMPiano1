@@ -46,10 +46,18 @@ unsigned char c700sqwave[] = {
 #define len(x) *(&x+1)-x
 #define lobit(x) x&0xff
 #define hibit(x) x>>8
+#define print(x) std::cout << x << std::endl;
 
 struct SPC700 : public sf::SoundStream
 {
+private:
+	std::array<unsigned char, 0x10000> aram{};
+	unsigned dpos = 0;
+	unsigned vxkon = 0;
+	unsigned pos = 0x200;
+public:
 	SPC_DSP dsp{};
+	std::array<SPC_DSP::sample_t, 2> buffer{};
 	SPC700()
 	{
 		dsp.init(aram.data());
@@ -62,6 +70,8 @@ struct SPC700 : public sf::SoundStream
 		while (dsp.sample_count() < buffer.size())
 		{
 			dsp.run(32);
+			printf("0x%04X, 0x%04X\n", buffer[0], buffer[1]);
+			//print(dsp.sample_count());
 		}
 		dsp.set_output(buffer.data(), buffer.size());
 		data.sampleCount = buffer.size();
@@ -72,7 +82,7 @@ struct SPC700 : public sf::SoundStream
 	void onSeek(sf::Time timeOffset) override {};
 
 	void init() {
-		for (int i = 0; i < SPC_DSP::register_count; i++) {
+		for (int i = 0; i < 0x7F; i++) {
 			if (i == KOF) dsp.write(KOF, 0xff);
 			else if (i == DIR) dsp.write(DIR, 0x67);
 			else if (i == FLG) dsp.write(FLG, 0x60);
@@ -121,13 +131,6 @@ struct SPC700 : public sf::SoundStream
 		dsp.write(KON, 1 << voice);
 		dsp.write(KOF, 0 << voice);
 	}
-
-private:
-	std::array<unsigned char, 0x10000> aram{};
-	std::array<SPC_DSP::sample_t, 32> buffer{};
-	unsigned dpos = 0;
-	unsigned vxkon = 0;
-	unsigned pos = 0x200;
 };
 
 int main()
@@ -135,8 +138,8 @@ int main()
 	SPC700 emu;
 	emu.init();
 	emu.newsample(c700sqwave, len(c700sqwave), 9);
-	emu.note(0, 1, 32000, 0, 128, 0x0f, 0xe0);
+	emu.note(0, 1, 32000, 0, 128, 128, 0x0f, 0xe0);
 	emu.play();
-	while (emu.getStatus() == sf::SoundSource::Status::Playing) { std::cout << emu.dsp.sample_count() << std::endl; }
+	while (emu.getStatus() == sf::SoundSource::Status::Playing) {}
 	return 0;
 }
