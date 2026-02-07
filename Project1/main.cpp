@@ -47,26 +47,25 @@ unsigned char c700sqwave[] = {
 #define lobit(x) x&0xff
 #define hibit(x) x>>8
 
-struct DSPStream : public sf::SoundStream
+struct SPC700 : public sf::SoundStream
 {
 	SPC_DSP dsp{};
-	SPC_DSP::sample_t* buffer = (SPC_DSP::sample_t*)calloc(64000,sizeof(SPC_DSP::sample_t));
-	DSPStream()
+	SPC700()
 	{
 		dsp.init(aram.data());
 		initialize(2, 32000, { sf::SoundChannel::FrontLeft, sf::SoundChannel::FrontRight });
-		dsp.set_output(buffer, 64000);
+		dsp.set_output(buffer.data(), buffer.size());
 		dsp.reset();
 	}
 	bool onGetData(Chunk& data) override
 	{
-		dsp.set_output(buffer, 64000);
-		while (dsp.sample_count() < 64000)
+		while (dsp.sample_count() < buffer.size())
 		{
-			dsp.run(512000);
+			dsp.run(32);
 		}
-		data.sampleCount = 64000;
-		data.samples = buffer;
+		dsp.set_output(buffer.data(), buffer.size());
+		data.sampleCount = buffer.size();
+		data.samples = buffer.data();
 		return true;
 	}
 
@@ -125,7 +124,7 @@ struct DSPStream : public sf::SoundStream
 
 private:
 	std::array<unsigned char, 0x10000> aram{};
-	#define aram aram.data();
+	std::array<SPC_DSP::sample_t, 32> buffer{};
 	unsigned dpos = 0;
 	unsigned vxkon = 0;
 	unsigned pos = 0x200;
@@ -133,11 +132,11 @@ private:
 
 int main()
 {
-	DSPStream emu;
-	emu.play();
+	SPC700 emu;
 	emu.init();
 	emu.newsample(c700sqwave, len(c700sqwave), 9);
 	emu.note(0, 1, 32000, 0, 128, 0x0f, 0xe0);
-	while (emu.getStatus() == sf::SoundSource::Status::Playing) {}
+	emu.play();
+	while (emu.getStatus() == sf::SoundSource::Status::Playing) { std::cout << emu.dsp.sample_count() << std::endl; }
 	return 0;
 }
