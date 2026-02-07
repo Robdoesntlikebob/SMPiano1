@@ -50,8 +50,7 @@
               "RelativeToolTip": "Project1\\void idk.txt",
               "ViewState": "AgIAAF0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003109|",
-              "WhenOpened": "2026-02-06T19:21:47.47Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-02-06T19:21:47.47Z"
             },
             {
               "$type": "Document",
@@ -63,8 +62,7 @@
               "RelativeToolTip": "Project1\\class SPC700.txt",
               "ViewState": "AgIAACQAAAAAAAAAAADwvwAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003109|",
-              "WhenOpened": "2026-02-06T19:21:45.704Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-02-06T19:21:45.704Z"
             },
             {
               "$type": "Document",
@@ -88,8 +86,7 @@
               "RelativeToolTip": "Project1\\sndemu\\dsp.h",
               "ViewState": "AgIAAB4AAAAAAAAAAADwvzEAAAAuAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2026-02-06T17:59:54.761Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-02-06T17:59:54.761Z"
             },
             {
               "$type": "Document",
@@ -113,8 +110,7 @@
               "RelativeToolTip": "Project1\\sndemu\\SPC_DSP.cpp",
               "ViewState": "AgIAAIABAAAAAAAAAAAhwI4BAAAdAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2026-02-06T17:59:44.776Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-02-06T17:59:44.776Z"
             },
             {
               "$type": "Document",
@@ -124,7 +120,7 @@
               "RelativeDocumentMoniker": "Project1\\main.cpp",
               "ToolTip": "C:\\Users\\thech\\Documents\\GitHub\\snes-daw-cpp--attempt-69-\\Project1\\main.cpp",
               "RelativeToolTip": "Project1\\main.cpp",
-              "ViewState": "AgIAAEYAAAAAAAAAAAAAAGMAAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAEgAAAAAAAAAAAAAAC4AAAAEAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
               "WhenOpened": "2026-02-05T19:45:03.262Z",
               "EditorCaption": ""

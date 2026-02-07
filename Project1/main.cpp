@@ -27,37 +27,56 @@ enum {
 };
 
 class SPC700 : public sf::SoundStream {
+public:
+#define lobit(x) x&255
+#define hibit(x) x>>8
+#define voll(x) (x<<4)
+#define volr(x) (x<<4)+1
+#define pl(x) (x<<4)+2
+#define ph(x) (x<<4)+3
+#define srcn(x) (x<<4)+4
+#define adsr1(x) (x<<4)+5
+#define adsr2(x) (x<<4)+6
+#define gain(x) (x<<4)+7
+#define envx(x) (x<<4)+8
+#define outx(x) (x<<4)+9
+#define r(x) spc_dsp_read(dsp,x)
+#define w(x,y) spc_dsp_write(dsp,x,y);
+#define run(x) spc_dsp_run(dsp,x);
 private:
     SPC_DSP* dsp = spc_dsp_new();
-    char* aram = (char*)calloc(0x1000, sizeof(char));
-    int count = 32000;
-    spc_dsp_sample_t* out = (spc_dsp_sample_t*)calloc(2 * count, sizeof(spc_dsp_sample_t));
-    bool onGetData(Chunk& data) override { spc_dsp_set_output(dsp, out, 32); return true; }
+    typedef spc_dsp_sample_t sample_t;
+    std::array<char, 0x10000 * sizeof(char)> aram{};
+    std::array<sample_t, 64000 * sizeof(sample_t)> out{};
+    bool onGetData(Chunk& data) override {
+        spc_dsp_set_output(dsp, out.data(), out.size());
+        while (spc_dsp_sample_count(dsp) > out.size()) {
+            run(512000);
+        }
+        data.sampleCount = out.size();
+        data.samples = out.data();
+        return true;
+    }
     void onSeek(sf::Time x)override{}
     unsigned dtpos = 0;
-    unsigned dir = 0xff;
+    const unsigned dir = 0xff;
     unsigned pos = 0x200;
-    unsigned counter = 0;
 public:
-    #define lobit(x) x&255
-    #define hibit(x) x>>8
-    #define voll(x) (x<<4)
-    #define volr(x) (x<<4)+1
-    #define pl(x) (x<<4)+2
-    #define ph(x) (x<<4)+3
-    #define srcn(x) (x<<4)+4
-    #define adsr1(x) (x<<4)+5
-    #define adsr2(x) (x<<4)+6
-    #define gain(x) (x<<4)+7
-    #define envx(x) (x<<4)+8
-    #define outx(x) (x<<4)+9
-    #define r(x) spc_dsp_read(dsp,x)
-    #define w(x,y) spc_dsp_write(dsp,x,y);
-    #define run(x) spc_dsp_run(dsp,x);
     SPC700() {
-        spc_dsp_init(dsp, aram);
-        spc_dsp_set_output(dsp, out, 2*count);
+        spc_dsp_init(dsp, aram.data());
+        spc_dsp_set_output(dsp, out.data(),out.size());
         spc_dsp_reset(dsp);
+        initialize(2, 32000, { sf::SoundChannel::FrontLeft,sf::SoundChannel::FrontRight });
+    }
+    void newsample(unsigned char* sample, unsigned length, unsigned loop) {
+        memcpy(aram.data() + pos, sample, length);
+        aram.data()[dir + dtpos] = lobit(pos); dtpos++;
+        aram.data()[dir + dtpos] = hibit(pos); dtpos++;
+        aram.data()[dir + dtpos] = hibit(loop+pos); dtpos++;
+        aram.data()[dir + dtpos] = hibit(loop+pos); dtpos++;
+        pos += length;
+    }
+    void testplay() {
         w(DIR, 0xff);
         w(voll(0), 128);
         w(volr(0), 128);
@@ -65,28 +84,13 @@ public:
         w(MVOLR, 128);
         w(FLG, 0x20);
         w(srcn(0), 0);
-        w(pl(0), 0x00);
-        w(ph(0), 0x10);
+        w(pl(0), 0xFF);
+        w(ph(0), 0x1F);
         w(adsr1(0), 0x0F);
-        w(adsr2(0), 0xE0); //move some of them to note function if succeeded
-        initialize(2, 32000, { sf::SoundChannel::FrontLeft,sf::SoundChannel::FrontRight });
-    }
-    void newsample(unsigned char* sample, unsigned length, unsigned loop) {
-        memcpy(aram + pos, sample, length);
-        aram[dir + dtpos] = lobit(pos); dtpos++;
-        aram[dir + dtpos] = hibit(pos); dtpos++;
-        aram[dir + dtpos] = hibit(loop+pos); dtpos++;
-        aram[dir + dtpos] = hibit(loop+pos); dtpos++;
-        pos += length;
-    }
-    void testplay() {
+        w(adsr2(0), 0xE0);
         w(KON, 1);
-        run(512000);
     }
     void debug() {
-        //for (int i = 0; i < spc_dsp_sample_count(dsp)/2; i++) {
-        //    printf("0x%04X, 0x%04X\n", out[i * 2], out[1 + i * 2]);
-        //}
         print(spc_dsp_sample_count(dsp));
     }
 };
@@ -94,7 +98,7 @@ public:
 int main() {
     SPC700 emu;
     emu.newsample(BRR_SAWTOOTH, len(BRR_SAWTOOTH),0);
-    emu.testplay();
     emu.play();
-    emu.debug();
+    emu.testplay();
+    while (emu.getStatus() == sf::SoundSource::Status::Playing) { emu.debug(); }
 }
