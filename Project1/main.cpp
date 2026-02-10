@@ -1,8 +1,16 @@
-﻿#include <SFML/Audio.hpp>
+﻿//written by: Jonny (Discord @jonnyptn), Rob (Discord @rob_doesnt_like_bob6962), Screwtape (Discord @screwtapello)
+
+#include <SFML/Audio.hpp>
+#include <SFML/Graphics.hpp>
+#include <SFML/Window.hpp>
+#include <SFML/Network.hpp>
+#include <SFML/System.hpp>
 #include "sndEMU/SPC_DSP.h"
 #include "stdc++.h"
+#include "imgui.h"
+#include "imgui-SFML.h"
 
-enum g_regs{
+enum g_regs {
 	MVOLL = 0x0C,
 	MVOLR = 0x1C,
 	EVOLL = 0x2C,
@@ -17,6 +25,8 @@ enum g_regs{
 	DIR = 0x5D, //0x67 (SIX SEVEN)
 	ESA = 0x6D, //0x80
 	EDL = 0x7D,
+	ADSR = 128,
+	GAIN = 0 << 8,
 };
 
 unsigned char BRR_SAWTOOTH[] = {
@@ -47,6 +57,7 @@ unsigned char c700sqwave[] = {
 #define lobit(x) x&0xff
 #define hibit(x) x>>8
 #define print(x) std::cout << x << std::endl;
+#define CHANNELS { sf::SoundChannel::FrontLeft, sf::SoundChannel::FrontRight }
 
 struct SPC700 : public sf::SoundStream
 {
@@ -57,36 +68,34 @@ private:
 	unsigned pos = 0x200;
 public:
 	SPC_DSP dsp{};
-	std::array<SPC_DSP::sample_t, 32> buffer{};
+	std::array<SPC_DSP::sample_t, 32000> buffer{};
 	SPC700()
 	{
 		dsp.init(aram.data());
-		initialize(2, 32000, { sf::SoundChannel::FrontLeft, sf::SoundChannel::FrontRight });
+		initialize(2, 32000, CHANNELS);
 		dsp.set_output(buffer.data(), buffer.size());
 		dsp.reset();
-		for (int i = 0; i < 0x7F; i++) {
-			if (i == KOF) dsp.write(KOF, 0xff);
-			else if (i == DIR) dsp.write(DIR, 0x67);
-			else if (i == FLG) dsp.write(FLG, 0x60);
-			else if (i == ESA) dsp.write(ESA, 0x80);
-			else dsp.write(i, 0);
-		}
-		dsp.write(MVOLL, 127), dsp.write(MVOLR, 127); dsp.write(FLG, 0x20);
+		dsp.write(MVOLL, 127);
+		dsp.write(MVOLR, 127);
+		dsp.write(DIR, 0x67);
+		dsp.write(FLG, 0x20);
+		dsp.write(ESA, 0x80);
+		dsp.write(EON, 0x00);
+		dsp.write(NON, 0x00);
+		dsp.write(PMON, 0x00);
 	}
 	bool onGetData(Chunk& data) override
 	{
-		while (dsp.sample_count() < buffer.size())
-		{
-			dsp.run(32);
-			printf("0x%04X, 0x%04X\n", buffer[0], buffer[1]);
-			//print(dsp.sample_count());
-		}
-		if (dsp.sample_count() >= buffer.size()) {
 		dsp.set_output(buffer.data(), buffer.size());
+		for (int i = 0; i < 8; i++) {
+			if (vxkon > 0) { dsp.write(vvoll(i), dsp.read(vvoll(i)) / vxkon); dsp.write(vvolr(i), dsp.read(vvolr(i)) / vxkon); }
+			else continue;
+		}
+		dsp.run(32 * (buffer.size() / 2));
 		data.sampleCount = buffer.size();
 		data.samples = buffer.data();
 		return true;
-		}
+		//}
 	} void onSeek(sf::Time timeOffset) override {};
 
 	void pitch(unsigned pitch, unsigned voice) {
@@ -94,7 +103,7 @@ public:
 		dsp.write(vph(voice), hibit(pitch)&0x3f);
 	}
 
-	void newsample(unsigned char* sample, unsigned len, unsigned loop) {
+	void newsample(unsigned char* sample, size_t len, unsigned loop) {
 		memcpy(aram.data() + pos, sample, len);
 		aram.data()[0x6700 + dpos] = lobit(pos); dpos++;
 		aram.data()[0x6700 + dpos] = hibit(pos); dpos++;
@@ -106,8 +115,8 @@ public:
 	void note(unsigned voice, bool hz, unsigned p, unsigned srcn, unsigned voll, unsigned volr, unsigned adsr1, unsigned adsr2) {
 		vxkon++;
 		dsp.write(vsrcn(0), srcn);
-		dsp.write(vvoll(0), voll/vxkon);
-		dsp.write(vvolr(0), volr/vxkon);
+		dsp.write(vvoll(0), voll);
+		dsp.write(vvolr(0), volr);
 		if (hz) pitch(pow(2, 12) * (p / 32000), voice);
 		else pitch(p, voice);
 		dsp.write(vadsr1(voice), adsr1);
@@ -119,23 +128,61 @@ public:
 	void note(unsigned voice, bool hz, unsigned p, unsigned srcn, unsigned vol, unsigned adsr1, unsigned adsr2) {
 		vxkon++;
 		dsp.write(vsrcn(0), srcn);
-		dsp.write(vvoll(0), vol / vxkon);
-		dsp.write(vvolr(0), vol / vxkon);
-		if (hz) pitch(pow(2, 12) * (p / 32000), voice);
+		dsp.write(vvoll(0), vol);
+		dsp.write(vvolr(0), vol);
+		if (hz) pitch(4096 * (p / 32000), voice);
 		else pitch(p, voice);
 		dsp.write(vadsr1(voice), adsr1);
 		dsp.write(vadsr2(voice), adsr2);
 		dsp.write(KON, 1 << voice);
 		dsp.write(KOF, 0 << voice);
 	}
+	void endnote(unsigned voice) {
+		dsp.write(KOF, 1 << voice);
+		dsp.write(KON, 0 << voice);
+	}
 };
 
+using namespace ImGui;
 int main()
 {
 	SPC700 emu;
-	emu.newsample(c700sqwave, len(c700sqwave), 9);
 	emu.play();
-	emu.note(0, 1, 32000, 0, 128, 0x0f, 0xe0);
-	while (emu.getStatus() == sf::SoundSource::Status::Playing) {}
+	emu.newsample(c700sqwave, len(c700sqwave), 9);
+	emu.newsample(BRR_SAWTOOTH, len(BRR_SAWTOOTH), 0);
+	sf::RenderWindow window(sf::VideoMode({1280,720}), "SMPiano");
+	ImGui::SFML::Init(window);
+
+	sf::Clock dt;
+	while (window.isOpen()) {
+	ImGuiIO &io = ImGui::GetIO();
+		while (const auto event = window.pollEvent()) {
+			SFML::ProcessEvent(window, *event);
+#define event(e) event->is<sf::Event::##e>()
+			if (event(Closed)) {
+				window.close();
+			}
+		}
+		SFML::Update(window, dt.restart());
+
+
+
+		ImGui::SetNextWindowSize({ window.getSize() });
+		ImGui::SetNextWindowPos({0,0});
+		ImGui::Begin("Main", 0, ImGuiWindowFlags_NoTitleBar bitor ImGuiWindowFlags_NoResize bitor ImGuiWindowFlags_NoMove);
+		while (ImGui::Button("Delete System32")) {
+			emu.note(0, 0, 0x106e, 0, 127, ADSR + 0xA, 0xe0);
+			emu.note(1, 0, 0xabc, 0, 127, ADSR + 0xA, 0xe0);
+		}
+		ImGui::End();
+
+
+
+
+		window.clear();
+		SFML::Render(window);
+		window.display();
+	}
+	SFML::Shutdown();
 	return 0;
 }
