@@ -68,7 +68,7 @@ private:
 	unsigned pos = 0x200;
 public:
 	SPC_DSP dsp{};
-	std::array<SPC_DSP::sample_t, 32000> buffer{};
+	std::array<SPC_DSP::sample_t, 2> buffer{};
 	SPC700()
 	{
 		dsp.init(aram.data());
@@ -88,8 +88,8 @@ public:
 	{
 		dsp.set_output(buffer.data(), buffer.size());
 		for (int i = 0; i < 8; i++) {
-			if (vxkon > 0) { dsp.write(vvoll(i), dsp.read(vvoll(i)) / vxkon); dsp.write(vvolr(i), dsp.read(vvolr(i)) / vxkon); }
-			else continue;
+			//if (vxkon > 0) { dsp.write(vvoll(i), dsp.read(vvoll(i)) / vxkon); dsp.write(vvolr(i), dsp.read(vvolr(i)) / vxkon); }
+			//else continue;
 		}
 		dsp.run(32 * (buffer.size() / 2));
 		data.sampleCount = buffer.size();
@@ -155,7 +155,12 @@ int main()
 
 	sf::Clock dt;
 	while (window.isOpen()) {
-	ImGuiIO &io = ImGui::GetIO();
+		/*necessary variables and theme*/
+		ImGuiIO &io = ImGui::GetIO();
+		ImGuiStyle &theme = ImGui::GetStyle();
+		theme.FrameRounding = 0.0f;
+
+
 		while (const auto event = window.pollEvent()) {
 			SFML::ProcessEvent(window, *event);
 #define event(e) event->is<sf::Event::##e>()
@@ -166,19 +171,21 @@ int main()
 		SFML::Update(window, dt.restart());
 
 
-
+		/*this is where the fun begins*/
 		ImGui::SetNextWindowSize({ window.getSize() });
-		ImGui::SetNextWindowPos({0,0});
+		ImGui::SetNextWindowPos({ 0,0 });
 		ImGui::Begin("Main", 0, ImGuiWindowFlags_NoTitleBar bitor ImGuiWindowFlags_NoResize bitor ImGuiWindowFlags_NoMove);
-		while (ImGui::Button("Delete System32")) {
-			emu.note(0, 0, 0x106e, 0, 127, ADSR + 0xA, 0xe0);
-			emu.note(1, 0, 0xabc, 0, 127, ADSR + 0xA, 0xe0);
+		ImGui::Button("		C");
+		if (IsItemActivated()) {
+			emu.note(0, 0, 0x106e, 0, 128, ADSR + 10, 0xe0);
+		}
+		else if (IsItemDeactivated()) {
+			emu.endnote(0);
 		}
 		ImGui::End();
 
 
-
-
+		/*this is where it ends :broken_heart:*/
 		window.clear();
 		SFML::Render(window);
 		window.display();
